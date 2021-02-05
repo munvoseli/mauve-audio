@@ -9,6 +9,9 @@
 // ffplay -formats
 // ffplay -f f32le -ar 44100 -ac 1 p.raw
 
+//     g++ caudio.cpp -o caudio; ./caudio p; ffplay -f f32le -ar 44100 -ac 1 p.raw
+
+
 void handleNewStringWait (std::string *lastToken, std::string *token)
 {
   
@@ -58,7 +61,7 @@ float getSongLength (std::string content)
       lastToken = content.substr(posM, posL - posM - 1);
       token = content.substr(posL, pos - posL - 1);
       if (lastToken == "w")
-	len += 44100 * std::stoi (token);
+	len += 44100 * std::stof (token);
       posM = posL;
       posL = pos;
     }
@@ -73,12 +76,10 @@ int main (int argc, char **argv)
   std::string line;
   std::string content;
   infile.open(argv[1] + std::string(".ma"));
-  outfile.open(argv[1] + std::string(".raw"), std::ios::out | std::ios::binary | std::ios::trunc);
   if (!infile)
     std::cout << "No input file :(\n";
-  if (!outfile)
-    std::cout << "Failed output file :(\n";
   content = getContent (infile);
+  infile.close();
   std::string newline = "\n";
   int a = 400;
   int rate = 44100;
@@ -97,6 +98,7 @@ int main (int argc, char **argv)
   // 	}
   int pitch = 0;
   int datai = 1;
+  float vol = 1;
   float freq = 440;
   size_t pos = 0;
   size_t posL = 0;
@@ -115,14 +117,28 @@ int main (int argc, char **argv)
 	  std::cout << pitch << std::endl;
 	  freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
 	}
+      if (lastToken == "po")
+	{
+	  if (token == "+")
+	    pitch += 12;
+	  else if (token == "-")
+	    pitch -= 12;
+	  else
+	    std::cout << "Unrecognized po parameter" << std::endl;
+	  freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
+	}
+      else if (lastToken == "v")
+	{
+	  vol = std::stof (token);
+	}
       else if (lastToken == "w")
 	{
-	  int goal = datai + std::stoi (token) * (float) rate;
+	  int goal = datai + std::stof (token) * (float) rate;
 	  while (datai < goal)
 	    {
-	      data[datai] = data[datai - 1] + freq / (float) rate;
-	      if (data[datai] > .5)
-		data[datai] -= 1.0;
+	      data[datai] = data[datai - 1] + vol * freq / (float) rate;
+	      if (data[datai] > vol / 2.0)
+		data[datai] -= vol;
 	      data[datai];
 	      datai++;
 	    }
@@ -130,13 +146,15 @@ int main (int argc, char **argv)
       posM = posL;
       posL = pos;
     }
+  // write data
+  outfile.open(argv[1] + std::string(".raw"), std::ios::out | std::ios::binary | std::ios::trunc);
+  if (!outfile)
+    std::cout << "Failed output file :(\n";
   for (int i = 0; i < len; i++)
     {
-      //outfile << data[i];
       outfile.write ( reinterpret_cast<char*>(&data[i]), sizeof(data[i]));
     }
   outfile.close();
-  infile.close();
   std::cout << "Data:" << std::endl;
   for (int i = 0; i < 10; i++)
     std::cout << data[i] << std::endl;

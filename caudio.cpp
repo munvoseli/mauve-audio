@@ -98,6 +98,8 @@ int main (int argc, char **argv)
   // 	}
   int pitch = 0;
   int datai = 1;
+  int attackLength = 0;
+  int releaseLength = 0;
   float vol = 1;
   float freq = 440;
   size_t pos = 0;
@@ -127,13 +129,24 @@ int main (int argc, char **argv)
 	    std::cout << "Unrecognized po parameter" << std::endl;
 	  freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
 	}
-      else if (lastToken == "v")
+      else if (lastToken == "al") // attack length
+	{
+	  attackLength = rate * std::stof (token);
+	}
+      else if (lastToken == "rl") // release length
+	{
+	  releaseLength = rate * std::stof (token);
+	}
+      else if (lastToken == "v") // volume
 	{
 	  vol = std::stof (token);
 	}
       else if (lastToken == "w")
 	{
+	  int start = datai;
+	  int attackGoal = std::min(start + attackLength, len - 1);
 	  int goal = datai + std::stof (token) * (float) rate;
+	  int releaseGoal = std::max(start, goal - releaseLength);
 	  while (datai < goal)
 	    {
 	      data[datai] = data[datai - 1] + vol * freq / (float) rate;
@@ -142,6 +155,23 @@ int main (int argc, char **argv)
 	      data[datai];
 	      datai++;
 	    }
+	  float i = 0;
+	  // now, datai == goal. If releaseLength == 0, then releaseGoal == goal (unless start > goal), then no loop occurs
+	  while (datai > releaseGoal)
+	    {
+	      data[datai] *= i / (float) releaseLength;
+	      datai--;
+	      i++;
+	    }
+	  datai = start;
+	  i = 0;
+	  while (datai < attackGoal)
+	    {
+	      data[datai] *= i / (float) attackLength;
+	      datai++;
+	      i++;
+	    }
+	  datai = goal;
 	}
       posM = posL;
       posL = pos;

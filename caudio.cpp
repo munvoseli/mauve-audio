@@ -103,7 +103,7 @@ int main (int argc, char **argv)
   std::ofstream outfile;
   std::string line;
   std::string content;
-  infile.open(argv[1] + std::string(".ma"));
+  infile.open(argv[1] + std::string(".kaud"));
   if (!infile)
     std::cout << "No input file :(\n";
   content = getContent (infile);

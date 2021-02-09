@@ -17,17 +17,58 @@ void handleNewStringWait (std::string *lastToken, std::string *token)
   
 }
 
-std::string getContent (std::ifstream &infile)
+std::string getContent (std::ifstream& infile)
 {
   std::string content( (std::istreambuf_iterator<char>(infile) ),
 		       (std::istreambuf_iterator<char>(      ) ) );
-  // replace spaces with newlines
+  size_t pos = 0;
   std::string newline = "\n";
   std::string space = " ";
-  size_t pos = 0;
+  // replace spaces with newlines
   while ((pos = content.find(space)) != std::string::npos)
     content.replace(pos, 1, newline);
   content.append("\n");
+  // preprocess macros
+  pos = 0;
+  size_t posBeforeName = 0;
+  size_t posAfterName = 0;
+  size_t posL = 0;
+  size_t posUseMacro = 0;
+  std::string macroName;
+  std::string macroNameSearch;
+  std::string macroContent;
+  size_t macroNameLength;
+  size_t macroContentLength;
+  size_t macroNameAdd = ((std::string) "usemacro").length();
+  while ((pos = content.find("defmacro")) != std::string::npos)
+    {
+      posL = content.find("defmacro", pos + 1);
+      if (posL == std::string::npos)
+	  macroContentLength = std::string::npos;
+      else
+	{
+	  macroContentLength = posL - posAfterName - 1;
+	}
+      posBeforeName = content.find(newline, pos + 1);
+      posAfterName = content.find(newline, posBeforeName + 1);
+      // gotta store the macro and then erase it from the content
+      macroNameLength = posAfterName - posBeforeName;
+      macroName = content.substr(posBeforeName, macroNameLength + 1); // has a newline at the beginning
+      macroNameSearch = (std::string) "usemacro" + macroName; // TODO: try out append
+      std::cout << posBeforeName << " " << posAfterName << std::endl << macroNameSearch << std::endl << std::endl;
+      macroContent = content.substr(posAfterName + 1, macroContentLength);
+      content.erase(pos, posL - pos - 1);
+      // now search for macros with this name, and replace "usemacro [name]" with the content
+      while ((posUseMacro = content.find(macroNameSearch)) != std::string::npos)
+	{
+	  content.erase(posUseMacro, macroNameLength + macroNameAdd);
+	  content.insert(posUseMacro, macroContent.c_str());
+	}
+      pos = 0;
+    }
+  std::cout << content << std::endl;
+  if (content.find("macro") != std::string::npos)
+    std::cout << "ERROR: Recursive macro, probably, or something else. Program will not function." << std::endl;
   // remove redundant newlines
   pos = 1;
   while (pos < content.size())
@@ -44,10 +85,9 @@ std::string getContent (std::ifstream &infile)
   return content;
 }
 
-float getSongLength (std::string content)
+float getSongLength (const std::string& content)
 {
   // search for waits and add
-  // https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
   size_t pos = 0;
   size_t posL = 0;
   size_t posM = 0;

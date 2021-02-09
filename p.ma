@@ -5,6 +5,11 @@ p 2
 w .75
 p 3
 w .25
+usemacro a
+usemacro a
+
+defmacro a
+po -
 po -
 p 7 v .5
 w 1

@@ -13,3 +13,5 @@ Use this to build the audio and play.
 `v` takes a float between 0 and 1, and sets the volume.
 
 `w` will cause a note to play. Its argument is the length of the note.
+
+`defmacro [name]` - macros are defined at the end of the string. The name must not contain whitespace. They are preprocessed (just string replacement) with `usemacro [name]`.

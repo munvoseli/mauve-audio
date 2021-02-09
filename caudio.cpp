@@ -11,12 +11,6 @@
 
 //     g++ caudio.cpp -o caudio; ./caudio p; ffplay -f f32le -ar 44100 -ac 1 p.raw
 
-
-void handleNewStringWait (std::string *lastToken, std::string *token)
-{
-  
-}
-
 std::string getContent (std::ifstream& infile)
 {
   std::string content( (std::istreambuf_iterator<char>(infile) ),
@@ -46,9 +40,7 @@ std::string getContent (std::ifstream& infile)
       if (posL == std::string::npos)
 	  macroContentLength = std::string::npos;
       else
-	{
 	  macroContentLength = posL - posAfterName - 1;
-	}
       posBeforeName = content.find(newline, pos + 1);
       posAfterName = content.find(newline, posBeforeName + 1);
       // gotta store the macro and then erase it from the content
@@ -74,13 +66,9 @@ std::string getContent (std::ifstream& infile)
   while (pos < content.size())
     {
       if (content.substr(pos - 1, 2) == newline + newline)
-	{
 	  content.erase(pos, 1);
-	}
       else
-	{
 	  pos++;
-	}
     }
   return content;
 }

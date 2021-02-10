@@ -1,6 +1,6 @@
-Use this to build the audio and play.
+The purpose of Mauve is to provide a command line and text editor substitute for graphical music applications - it is a language for making music.
 
-    ./caudio p; ffplay -f f32le -ar 44100 -ac 1 p.raw
+Use `make` and `make play` to compile the program, build the example audio, and play.
 
 # The notation
 

@@ -11,6 +11,42 @@
 
 //     g++ caudio.cpp -o caudio; ./caudio p; ffplay -f f32le -ar 44100 -ac 1 p.raw
 
+void applyMacro (std::string& content, std::string& macroName, std::string& macroContent)
+{
+  size_t pos_usemacro, pos_name, poe_name;
+  while ((pos_usemacro = content.find("usemacro")) != std::string::npos)
+    {
+      pos_name = content.find('\n', pos_usemacro);
+      while (content[pos_name] == '\n')
+	++pos_name;
+      poe_name = content.find('\n', pos_name);
+      if ( content.substr ( pos_name, poe_name - pos_name ) != macroName )
+	continue;
+      content.erase (pos_usemacro, poe_name - pos_usemacro);
+      content.insert (pos_usemacro, macroContent.c_str());
+    }
+}
+
+void applyMacros (std::string& content)
+{
+  size_t pos_defmacro,  pos_name, poe_name,  pos_content, poe_content;
+  std::string macroName;
+  std::string macroContent;
+  while ((pos_defmacro = content.find ("defmacro")) != std::string::npos)
+    {
+      pos_name = content.find('\n', pos_defmacro);
+      while (content[pos_name] == '\n')
+	++pos_name;
+      poe_name = content.find ('\n', pos_name);
+      pos_content = content.find ("{", pos_name) + 1;
+      poe_content = content.find ('}', pos_content);
+      macroName = content.substr (pos_name, poe_name - pos_name);
+      macroContent = content.substr (pos_content, poe_content - pos_content);
+      content.erase (pos_defmacro, poe_content + 1 - pos_defmacro);
+      applyMacro (content, macroName, macroContent);
+    }
+}
+
 std::string getContent (std::ifstream& infile)
 {
   std::string content( (std::istreambuf_iterator<char>(infile) ),
@@ -23,42 +59,7 @@ std::string getContent (std::ifstream& infile)
     content.replace(pos, 1, newline);
   content.append("\n");
   // preprocess macros
-  pos = 0;
-  size_t posBeforeName = 0;
-  size_t posAfterName = 0;
-  size_t posL = 0;
-  size_t posUseMacro = 0;
-  std::string macroName;
-  std::string macroNameSearch;
-  std::string macroContent;
-  size_t macroNameLength;
-  size_t macroContentLength;
-  size_t macroNameAdd = ((std::string) "usemacro").length();
-  while ((pos = content.find("defmacro")) != std::string::npos)
-    {
-      posL = content.find("defmacro", pos + 1);
-      if (posL == std::string::npos)
-	  macroContentLength = std::string::npos;
-      else
-	  macroContentLength = posL - posAfterName - 1;
-      posBeforeName = content.find(newline, pos + 1);
-      posAfterName = content.find(newline, posBeforeName + 1);
-      // gotta store the macro and then erase it from the content
-      macroNameLength = posAfterName - posBeforeName;
-      macroName = content.substr(posBeforeName, macroNameLength + 1); // has a newline at the beginning
-      macroNameSearch = (std::string) "usemacro" + macroName; // TODO: try out append
-      std::cout << posBeforeName << " " << posAfterName << std::endl << macroNameSearch << std::endl << std::endl;
-      macroContent = content.substr(posAfterName + 1, macroContentLength);
-      content.erase(pos, posL - pos - 1);
-      // now search for macros with this name, and replace "usemacro [name]" with the content
-      while ((posUseMacro = content.find(macroNameSearch)) != std::string::npos)
-	{
-	  content.erase(posUseMacro, macroNameLength + macroNameAdd);
-	  content.insert(posUseMacro, macroContent.c_str());
-	}
-      pos = 0;
-    }
-  std::cout << content << std::endl;
+  applyMacros (content);
   if (content.find("macro") != std::string::npos)
     std::cout << "ERROR: Recursive macro, probably, or something else. Program will not function." << std::endl;
   // remove redundant newlines
@@ -70,6 +71,7 @@ std::string getContent (std::ifstream& infile)
       else
 	  pos++;
     }
+  std::cout << content << std::endl;
   return content;
 }
 

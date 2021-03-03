@@ -2,50 +2,16 @@
 #include <fstream>
 #include <vector>
 #include <iterator>
-#include <regex>
 #include <cmath>
 #include <cstdint>
+#include "macro.h"
+#include "buffer.h"
+
+
+
 // ffplay -f s16le -ar 44100 -ac 1 p.raw
 // ffplay -formats
 // ffplay -f f32le -ar 44100 -ac 1 p.raw
-
-//     g++ caudio.cpp -o caudio; ./caudio p; ffplay -f f32le -ar 44100 -ac 1 p.raw
-
-void applyMacro (std::string& content, std::string& macroName, std::string& macroContent)
-{
-  size_t pos_usemacro, pos_name, poe_name;
-  while ((pos_usemacro = content.find("usemacro")) != std::string::npos)
-    {
-      pos_name = content.find('\n', pos_usemacro);
-      while (content[pos_name] == '\n')
-	++pos_name;
-      poe_name = content.find('\n', pos_name);
-      if ( content.substr ( pos_name, poe_name - pos_name ) != macroName )
-	continue;
-      content.erase (pos_usemacro, poe_name - pos_usemacro);
-      content.insert (pos_usemacro, macroContent.c_str());
-    }
-}
-
-void applyMacros (std::string& content)
-{
-  size_t pos_defmacro,  pos_name, poe_name,  pos_content, poe_content;
-  std::string macroName;
-  std::string macroContent;
-  while ((pos_defmacro = content.find ("defmacro")) != std::string::npos)
-    {
-      pos_name = content.find('\n', pos_defmacro);
-      while (content[pos_name] == '\n')
-	++pos_name;
-      poe_name = content.find ('\n', pos_name);
-      pos_content = content.find ("{", pos_name) + 1;
-      poe_content = content.find ('}', pos_content);
-      macroName = content.substr (pos_name, poe_name - pos_name);
-      macroContent = content.substr (pos_content, poe_content - pos_content);
-      content.erase (pos_defmacro, poe_content + 1 - pos_defmacro);
-      applyMacro (content, macroName, macroContent);
-    }
-}
 
 std::string getContent (std::ifstream& infile)
 {
@@ -73,30 +39,6 @@ std::string getContent (std::ifstream& infile)
     }
   std::cout << content << std::endl;
   return content;
-}
-
-float getSongLength (const std::string& content)
-{
-  // search for waits and add
-  size_t pos = 0;
-  size_t posL = 0;
-  size_t posM = 0;
-  int len = 0; // number of samples
-  std::string lastToken;
-  std::string token;
-  std::string newline = "\n";
-  while ((pos = content.find(newline, posL + 1)) != std::string::npos)
-    {
-      pos++;
-      lastToken = content.substr(posM, posL - posM - 1);
-      token = content.substr(posL, pos - posL - 1);
-      if (lastToken == "w")
-	len += 44100 * std::stof (token);
-      posM = posL;
-      posL = pos;
-    }
-  std::cout << std::to_string(len) << std::endl;
-  return len;
 }
 
 int main (int argc, char **argv)

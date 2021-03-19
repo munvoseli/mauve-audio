@@ -4,8 +4,10 @@
 #include <iterator>
 #include <cmath>
 #include <cstdint>
-#include "macro.h"
-#include "buffer.h"
+#include "struct.hpp"
+#include "macro.hpp"
+#include "contentbufferutils.hpp"
+#include "buffer.hpp"
 
 
 
@@ -59,7 +61,6 @@ int main (int argc, char **argv)
   int louds [16];
   int notes = 0;
   int len = getSongLength(content) + 1;
-  float *data = new float[len];
   std::cout << sizeof(float) << std::endl;
   // while (getline (infile, line) )
   // 	{
@@ -68,87 +69,7 @@ int main (int argc, char **argv)
   // 	      std::string wtimestr = std::string(line).substr (4);
   // 	    }
   // 	}
-  int pitch = 0;
-  int datai = 1;
-  int attackLength = 0;
-  int releaseLength = 0;
-  float vol = 1;
-  float freq = 440;
-  size_t pos = 0;
-  size_t posL = 0;
-  size_t posM = 0;
-  std::string lastToken;
-  std::string token;
-  while ((pos = content.find(newline, posL + 1)) != std::string::npos)
-    {
-      pos++;
-      lastToken = content.substr(posM, posL - posM - 1);
-      token = content.substr(posL, pos - posL - 1);
-      if (lastToken == "p")
-	{
-	  int rem = std::stoi (token, 0, 12);
-	  pitch = std::round( (float) (pitch - rem) / 12.0) * 12 + rem;
-	  std::cout << pitch << std::endl;
-	  freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
-	}
-      if (lastToken == "po")
-	{
-	  if (token == "+")
-	    pitch += 12;
-	  else if (token == "-")
-	    pitch -= 12;
-	  else
-	    std::cout << "Unrecognized po parameter" << std::endl;
-	  freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
-	}
-      else if (lastToken == "al") // attack length
-	{
-	  attackLength = rate * std::stof (token);
-	}
-      else if (lastToken == "rl") // release length
-	{
-	  releaseLength = rate * std::stof (token);
-	}
-      else if (lastToken == "v") // volume
-	{
-	  vol = std::stof (token);
-	}
-      else if (lastToken == "w")
-	{
-	  int start = datai;
-	  int attackGoal = std::min(start + attackLength, len - 1);
-	  int goal = datai + std::stof (token) * (float) rate;
-	  int releaseGoal = std::max(start, goal - releaseLength);
-	  while (datai < goal)
-	    {
-	      data[datai] = data[datai - 1] + vol * freq / (float) rate;
-	      if (data[datai] > vol / 2.0)
-		data[datai] -= vol;
-	      data[datai];
-	      datai++;
-	    }
-	  float i = 0;
-	  // now, datai == goal. If releaseLength == 0, then releaseGoal == goal (unless start > goal), then no loop occurs
-	  while (datai > releaseGoal)
-	    {
-	      data[datai] *= i / (float) releaseLength;
-	      datai--;
-	      i++;
-	    }
-	  datai = start;
-	  i = 0;
-	  while (datai < attackGoal)
-	    {
-	      data[datai] *= i / (float) attackLength;
-	      datai++;
-	      i++;
-	    }
-	  datai = goal;
-	}
-      posM = posL;
-      posL = pos;
-    }
-  // write data
+  
   outfile.open(argv[1] + std::string(".raw"), std::ios::out | std::ios::binary | std::ios::trunc);
   if (!outfile)
     std::cout << "Failed output file :(\n";

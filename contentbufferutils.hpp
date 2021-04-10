@@ -2,8 +2,9 @@
 
 int getBufferCount (const std::string &content)
 {
+	printf ("%s", content.c_str());
 	int c = 0;
-	size_t pos;
+	size_t pos = -1;
 	while ((pos = content.find("defbuffer", pos + 1)) != std::string::npos)
 		++c; // do not roll credits and do not collect 200
 	return c;

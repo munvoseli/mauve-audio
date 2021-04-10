@@ -63,7 +63,7 @@ int main (int argc, char **argv)
 	float *data;
 	MauveBuffer *buffers;
 	data = evaluateBuffers (content, rate, buffers);
-	printf ("%p", data);
+	printf ("Buffer address (main) %p\n", buffers);
 	// while (getline (infile, line) )
 	// 	{
 	// 	  if (std::string(line).substr(0, 4) == " ")
@@ -79,10 +79,11 @@ int main (int argc, char **argv)
 		outfile.write ( reinterpret_cast<char*>(&data[i]), sizeof(data[i]));
 	}
 	outfile.close();
-	std::cout << "Data:" << std::endl;
+	printf("Data: ");
 	for (int i = 0; i < 10; i++)
-		std::cout << data[i] << std::endl;
+		printf("%f ", data[i]);
+		printf("\n");
 	delete [] data;
-	delete [] buffers;
+	//delete [] buffers;
 	return 0;
 }

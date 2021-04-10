@@ -34,7 +34,7 @@ size_t getBufferLength (const std::string &content,
 	return len;
 }
 
-void handleWait (float *data, int &datai, const int rate,
+void handleWait (float *&data, int &datai, const int rate,
 		 const float vol, const float freq,
 		 const int attackLength, const int releaseLength,
 		 const int len, const std::string &token)
@@ -49,8 +49,9 @@ void handleWait (float *data, int &datai, const int rate,
 		if (data[datai] > vol / 2.0)
 			data[datai] -= vol;
 		data[datai];
-		datai++;
+		++datai;
 	}
+	printf("handleWait: %f %f %d\n", data[5], vol, rate);
 	float i = 0;
 	// now, datai == goal.
 	// if releaseLength == 0
@@ -74,7 +75,7 @@ void handleWait (float *data, int &datai, const int rate,
 }
 
 void handleTokens (const std::string &lastToken, const std::string &token,
-		   float *data, int len,
+		   float *&data, int len,
 		   int &pitch,
 		   int &datai,
 		   int &attackLength,
@@ -126,7 +127,7 @@ void evaluateBuffer (std::string &content, float *data, int len)
 	int datai = 1;
 	int attackLength = 0;
 	int releaseLength = 0;
-	int rate = 0;
+	int rate = 44100;
 	float vol = 1;
 	float freq = 440;
 	size_t pos = 0;
@@ -152,7 +153,7 @@ void evaluateMauveBuffer (MauveBuffer &buffer)
 	int datai = 1;
 	int attackLength = 0;
 	int releaseLength = 0;
-	int rate = 0;
+	int rate = 44100;
 	float vol = 1;
 	float freq = 440;
 	size_t pos = 0;
@@ -203,7 +204,8 @@ bool bufferDependenciesMet (size_t testi, size_t bc, MauveBuffer *buffers)
 	return true;
 }
 
-float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *buffers) // macros have been evaluated
+// MauveBuffer *&buffers feels like it should be illegal but I want a reference to the pointer instead of a pointer to the pointer because personal preference?
+float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *&buffers) // macros have been evaluated
 {
 	int bufferCount = getBufferCount (content);
 	buffers = new MauveBuffer [bufferCount]; // collected in main
@@ -234,6 +236,10 @@ float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *buffe
 			}
 		}
 	}
+	printf ("Buffer address (evalBuf): %p\n", buffers);
 	printf ("Data address for buffer 0: %p\n", buffers[0].data);
+	for (int i = 0; i < 10; i++)
+		printf("%f ", buffers[0].data[i]);
+	printf("\n");
 	return buffers[0].data;
 }

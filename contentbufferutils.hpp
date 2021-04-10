@@ -64,3 +64,11 @@ void loadBufferNamesAndContent (const std::string &content, int bufferCount, Mau
 			buffers[i].content = content.substr (poe_name, pos_next - poe_name);
 	}
 }
+
+size_t getIndexByName (const std::string &name, size_t bc, const MauveBuffer *buffers)
+{
+	for (size_t i = 0; i < bc; i++)
+		if (buffers[i].name == name)
+			return i;
+	return -1;
+}

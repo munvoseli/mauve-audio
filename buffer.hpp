@@ -1,5 +1,5 @@
 
-size_t getSongLength (const std::string& content)
+size_t getSongLength (const std::string& content, const size_t bc, const MauveBuffer *buffers)
 {
 	// search for waits and add
 	size_t pos = 0;
@@ -16,6 +16,10 @@ size_t getSongLength (const std::string& content)
 		token = content.substr(posL, pos - posL - 1);
 		if (lastToken == "w")
 			len += 44100 * std::stof (token);
+		else if (lastToken == "usebuffer")
+		{
+			len += buffers[getIndexByName(token, bc, buffers)].bufferLength;
+		}
 		posM = posL;
 		posL = pos;
 	}
@@ -23,18 +27,8 @@ size_t getSongLength (const std::string& content)
 	return len;
 }
 
-size_t getBufferLength (const std::string &content,
-			const std::string &bufferName)
-{
-	size_t len;
-	size_t aepos_bufcon [2];
-	getBufferContentBounds (content, bufferName, aepos_bufcon);
-	len = getSongLength (content.substr (aepos_bufcon[0],
-					     aepos_bufcon[1] - aepos_bufcon[0]));
-	return len;
-}
 
-void handleWait (float *&data, int &datai, const int rate,
+void handleWait (float *&data, size_t &datai, const int rate,
 		 const float vol, const float freq,
 		 const int attackLength, const int releaseLength,
 		 const int len, const std::string &token)
@@ -74,15 +68,28 @@ void handleWait (float *&data, int &datai, const int rate,
 	datai = goal;
 }
 
+void handleUsebuffer (float *&data, size_t &datai, const size_t bc, const MauveBuffer *buffers, const std::string &token)
+{
+	size_t index = getIndexByName (token, bc, buffers);
+	size_t i = 0;
+	while (i < buffers[index].bufferLength)
+	{
+		data[datai] = buffers[index].data[i];
+		++datai;
+		++i;
+	}
+}
+
 void handleTokens (const std::string &lastToken, const std::string &token,
 		   float *&data, int len,
 		   int &pitch,
-		   int &datai,
+		   size_t &datai,
 		   int &attackLength,
 		   int &releaseLength,
 		   float &vol,
 		   float &freq,
-		   int rate)
+		   int rate,
+		   const size_t bc, const MauveBuffer *buffers)
 {
 	int rem;
 	if (false)
@@ -119,38 +126,16 @@ void handleTokens (const std::string &lastToken, const std::string &token,
 		handleWait (data, datai, rate, vol, freq,
 			    attackLength, releaseLength, len, token);
 	}
-}
-void evaluateBuffer (std::string &content, float *data, int len)
-{
-	//float *data = new float[len];
-	int pitch = 0;
-	int datai = 1;
-	int attackLength = 0;
-	int releaseLength = 0;
-	int rate = 44100;
-	float vol = 1;
-	float freq = 440;
-	size_t pos = 0;
-	size_t posL = 0;
-	size_t posM = 0;
-	std::string lastToken;
-	std::string token;
-	while ((pos = content.find("\n", posL + 1)) != std::string::npos)
+	else if (lastToken == "usebuffer")
 	{
-		pos++;
-		lastToken = content.substr(posM, posL - posM - 1);
-		token = content.substr(posL, pos - posL - 1);
-		handleTokens (lastToken, token, data, len, pitch, datai,
-			      attackLength, releaseLength, vol, freq, rate);
-		posM = posL;
-		posL = pos;
+		handleUsebuffer (data, datai, bc, buffers, token);
 	}
-};
+}
 
-void evaluateMauveBuffer (MauveBuffer &buffer)
+void evaluateMauveBuffer (MauveBuffer &buffer, const size_t bc, const MauveBuffer *buffers)
 {
 	int pitch = 0;
-	int datai = 1;
+	size_t datai = 1;
 	int attackLength = 0;
 	int releaseLength = 0;
 	int rate = 44100;
@@ -159,7 +144,7 @@ void evaluateMauveBuffer (MauveBuffer &buffer)
 	size_t pos = 0;
 	size_t posL = 0;
 	size_t posM = 0;
-	size_t len = getSongLength (buffer.content) + 1;
+	size_t len = getSongLength (buffer.content, bc, buffers) + 1;
 	buffer.bufferLength = len;
 	buffer.data = new float [len];
 	std::string lastToken;
@@ -170,18 +155,10 @@ void evaluateMauveBuffer (MauveBuffer &buffer)
 		lastToken = buffer.content.substr(posM, posL - posM - 1);
 		token = buffer.content.substr(posL, pos - posL - 1);
 		handleTokens (lastToken, token, buffer.data, len, pitch, datai,
-			      attackLength, releaseLength, vol, freq, rate);
+			      attackLength, releaseLength, vol, freq, rate, bc, buffers);
 		posM = posL;
 		posL = pos;
 	}
-}
-
-size_t getIndexByName (const std::string &name, size_t bc, MauveBuffer *buffers)
-{
-	for (size_t i = 0; i < bc; i++)
-		if (buffers[i].name == name)
-			return i;
-	return -1;
 }
 
 bool bufferDependenciesMet (size_t testi, size_t bc, MauveBuffer *buffers)
@@ -214,7 +191,7 @@ float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *&buff
 	// try and get each buffer to load
 	bool allBuffersLoaded = false;
 	size_t i, j;
-	printf ("Hi%d\n", bufferCount);
+	printf ("evaluateBuffers: bufferCount is %d\n", bufferCount);
 	while (!allBuffersLoaded)
 	{
 		for (i = 0; i < bufferCount; ++i)
@@ -222,7 +199,7 @@ float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *&buff
 			if (!buffers[i].calculated && bufferDependenciesMet (i, bufferCount, buffers))
 			{
 				// calculate buffer
-				evaluateMauveBuffer (buffers[i]);
+				evaluateMauveBuffer (buffers[i], bufferCount, buffers);
 				buffers[i].calculated = 1;
 			}
 		}

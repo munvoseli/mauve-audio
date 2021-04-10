@@ -6,7 +6,13 @@ defbuffer main
   w .75
   p 3
   w .25
+  usebuffer bread
   usemacro a
+  usebuffer bread
+
+defbuffer bread
+  p 4
+  w 1
 
 defmacro a
   po -

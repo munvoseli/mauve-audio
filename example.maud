@@ -6,12 +6,17 @@ defbuffer main
   w .75
   p 3
   w .25
+  usebuffer pumefyuu
   usebuffer bread
   usemacro a
   usebuffer bread
 
+defbuffer pumefyuu
+  po +
+  w 2
+
 defbuffer bread
-  p 4
+  p 3
   w 1
 
 defmacro a

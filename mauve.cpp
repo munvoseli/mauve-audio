@@ -50,7 +50,7 @@ int main (int argc, char **argv)
 	std::string content;
 	infile.open(argv[1] + std::string(".maud"));
 	if (!infile)
-		std::cout << "No input file :(\n";
+		printf ("No input file :(\n");
 	content = getContent (infile);
 	infile.close();
 	std::string newline = "\n";
@@ -63,13 +63,6 @@ int main (int argc, char **argv)
 	MauveBuffer *buffers;
 	data = evaluateBuffers (content, rate, buffers);
 	printf ("Buffer address (main) %p\n", buffers);
-	// while (getline (infile, line) )
-	// 	{
-	// 	  if (std::string(line).substr(0, 4) == " ")
-	// 	    {
-	// 	      std::string wtimestr = std::string(line).substr (4);
-	// 	    }
-	// 	}
 	outfile.open(argv[1] + std::string(".raw"), std::ios::out | std::ios::binary | std::ios::trunc);
 	if (!outfile)
 		printf ("Failed output file :(\n");

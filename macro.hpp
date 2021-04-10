@@ -25,7 +25,7 @@ bool getMacroContentBounds (const std::string &content, const std::string &buffe
 		poe_content = content.find ("def", poe_name);
 		return true;
 	}
-	std::cout << "ERROR: Couldn't find macro " << bufferName << std::endl;
+	printf ("ERROR: Couldn't find macro %s", bufferName.c_str());
 	return false;
 }
 

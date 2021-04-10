@@ -9,7 +9,7 @@ size_t getSongLength (const std::string& content, const size_t bc, const MauveBu
 	std::string lastToken;
 	std::string token;
 	std::string newline = "\n";
-	while ((pos = content.find(newline, posL + 1)) != std::string::npos)
+	while ((pos = content.find(newline, posL)) != std::string::npos)
 	{
 		pos++;
 		lastToken = content.substr(posM, posL - posM - 1);
@@ -23,7 +23,6 @@ size_t getSongLength (const std::string& content, const size_t bc, const MauveBu
 		posM = posL;
 		posL = pos;
 	}
-	std::cout << std::to_string(len) << std::endl;
 	return len;
 }
 
@@ -45,7 +44,7 @@ void handleWait (float *&data, size_t &datai, const int rate,
 		data[datai];
 		++datai;
 	}
-	printf("handleWait: %f %f %d\n", data[5], vol, rate);
+	printf ("handleWait: %f\n", freq);
 	float i = 0;
 	// now, datai == goal.
 	// if releaseLength == 0
@@ -98,7 +97,6 @@ void handleTokens (const std::string &lastToken, const std::string &token,
 	{
 		rem = std::stoi (token, 0, 12);
 		pitch = std::round( (float) (pitch - rem) / 12.0) * 12 + rem;
-		std::cout << pitch << std::endl;
 		freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
 	}
         else if (lastToken == "po")
@@ -108,7 +106,7 @@ void handleTokens (const std::string &lastToken, const std::string &token,
 		else if (token == "-")
 			pitch -= 12;
 		else
-			std::cout << "Unrecognized po parameter" << std::endl;
+			printf ("Unrecognized po parameter");
 		freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
 	}
 	else if (lastToken == "al")
@@ -149,9 +147,9 @@ void evaluateMauveBuffer (MauveBuffer &buffer, const size_t bc, const MauveBuffe
 	buffer.data = new float [len];
 	std::string lastToken;
 	std::string token;
-	while ((pos = buffer.content.find("\n", posL + 1)) != std::string::npos)
+	while ((pos = buffer.content.find("\n", posL)) != std::string::npos)
 	{
-		pos++;
+		++pos;
 		lastToken = buffer.content.substr(posM, posL - posM - 1);
 		token = buffer.content.substr(posL, pos - posL - 1);
 		handleTokens (lastToken, token, buffer.data, len, pitch, datai,
@@ -167,7 +165,7 @@ bool bufferDependenciesMet (size_t testi, size_t bc, MauveBuffer *buffers)
 	size_t pos = 0, poe;
 	std::string name;
 	size_t ind;
-	while ((pos = buffers[testi].content.find("usebuffer", pos + 1)) != std::string::npos)
+	while ((pos = buffers[testi].content.find("usebuffer", pos)) != std::string::npos)
 	{
 		pos = buffers[testi].content.find("\n", pos);
 		while (buffers[testi].content[pos] == '\n')
@@ -192,6 +190,10 @@ float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *&buff
 	bool allBuffersLoaded = false;
 	size_t i, j;
 	printf ("evaluateBuffers: bufferCount is %d\n", bufferCount);
+	for (i = 0; i < bufferCount; ++i)
+	{
+		printf ("evaluateBuffers: buffer %s\n%s\n", buffers[i].name.c_str(), buffers[i].content.c_str());
+	}
 	while (!allBuffersLoaded)
 	{
 		for (i = 0; i < bufferCount; ++i)
@@ -199,6 +201,7 @@ float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *&buff
 			if (!buffers[i].calculated && bufferDependenciesMet (i, bufferCount, buffers))
 			{
 				// calculate buffer
+				printf ("Evaluating buffer %s\n", buffers[i].name.c_str());
 				evaluateMauveBuffer (buffers[i], bufferCount, buffers);
 				buffers[i].calculated = 1;
 			}
@@ -213,10 +216,7 @@ float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *&buff
 			}
 		}
 	}
-	printf ("Buffer address (evalBuf): %p\n", buffers);
+	printf ("evaluateBuffers: Buffer address (evalBuf): %p\n", buffers);
 	printf ("Data address for buffer 0: %p\n", buffers[0].data);
-	for (int i = 0; i < 10; i++)
-		printf("%f ", buffers[0].data[i]);
-	printf("\n");
 	return buffers[0].data;
 }

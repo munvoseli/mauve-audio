@@ -1,11 +1,12 @@
 
-size_t getSongLength (const std::string& content, const size_t bc, const MauveBuffer *buffers)
+size_t getSongLength (const std::string& content, const size_t bc, const MauveBuffer *buffers, const int rate)
 {
 	// search for waits and add
 	size_t pos = 0;
 	size_t posL = 0;
 	size_t posM = 0;
 	size_t len = 0; // number of samples
+	float tempo = 1;
 	std::string lastToken;
 	std::string token;
 	std::string newline = "\n";
@@ -15,10 +16,14 @@ size_t getSongLength (const std::string& content, const size_t bc, const MauveBu
 		lastToken = content.substr(posM, posL - posM - 1);
 		token = content.substr(posL, pos - posL - 1);
 		if (lastToken == "w")
-			len += 44100 * std::stof (token);
+			len += rate * (std::stof (token) / tempo);
 		else if (lastToken == "usebuffer")
 		{
 			len += buffers[getIndexByName(token, bc, buffers)].bufferLength;
+		}
+		else if (lastToken == "bps")
+		{
+			tempo = std::stof (token);
 		}
 		posM = posL;
 		posL = pos;
@@ -27,42 +32,37 @@ size_t getSongLength (const std::string& content, const size_t bc, const MauveBu
 }
 
 
-void handleWait (float *&data, size_t &datai, const int rate,
-		 const float vol, const float freq,
-		 const int attackLength, const int releaseLength,
+void handleWait (float *&data, size_t &datai, const NoteInfo noteInfo,
 		 const int len, const std::string &token)
 {
 	int start = datai;
-	int attackGoal = std::min(start + attackLength, len - 1);
-	int goal = datai + std::stof (token) * (float) rate;
-	int releaseGoal = std::max(start, goal - releaseLength);
+	int attackGoal = std::min(start + noteInfo.attackLength, len - 1);
+	int goal = datai + std::stof (token) / noteInfo.tempo * (float) noteInfo.rate;
+	int releaseGoal = std::max(start, goal - noteInfo.releaseLength);
 	while (datai < goal)
 	{
-		data[datai] = data[datai - 1] + vol * freq / (float) rate;
-		if (data[datai] > vol / 2.0)
-			data[datai] -= vol;
+		data[datai] = data[datai - 1] + noteInfo.vol * noteInfo.freq / (float) noteInfo.rate;
+		if (data[datai] > noteInfo.vol / 2.0)
+			data[datai] -= noteInfo.vol;
 		data[datai];
 		++datai;
 	}
-	printf ("handleWait: %f\n", freq);
+	printf ("handleWait: freq = %f Hz\n", noteInfo.freq);
 	float i = 0;
 	// now, datai == goal.
-	// if releaseLength == 0
-	// then releaseGoal == goal (unless start > goal),
-	// then no loop occurs
 	while (datai > releaseGoal)
 	{
-		data[datai] *= i / (float) releaseLength;
-		datai--;
-		i++;
+		data[datai] *= i / (float) noteInfo.releaseLength;
+		--datai;
+		++i;
 	}
 	datai = start;
 	i = 0;
 	while (datai < attackGoal)
 	{
-		data[datai] *= i / (float) attackLength;
-		datai++;
-		i++;
+		data[datai] *= i / (float) noteInfo.attackLength;
+		++datai;
+		++i;
 	}
 	datai = goal;
 }
@@ -81,13 +81,8 @@ void handleUsebuffer (float *&data, size_t &datai, const size_t bc, const MauveB
 
 void handleTokens (const std::string &lastToken, const std::string &token,
 		   float *&data, int len,
-		   int &pitch,
 		   size_t &datai,
-		   int &attackLength,
-		   int &releaseLength,
-		   float &vol,
-		   float &freq,
-		   int rate,
+		   NoteInfo &noteInfo,
 		   const size_t bc, const MauveBuffer *buffers)
 {
 	int rem;
@@ -96,37 +91,40 @@ void handleTokens (const std::string &lastToken, const std::string &token,
         else if (lastToken == "p")
 	{
 		rem = std::stoi (token, 0, 12);
-		pitch = std::round( (float) (pitch - rem) / 12.0) * 12 + rem;
-		freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
+		noteInfo.pitch = std::round( (float) (noteInfo.pitch - rem) / 12.0) * 12 + rem;
+		noteInfo.freq = 440.0 * std::pow (2.0, ((float) noteInfo.pitch) / 12.0);
 	}
         else if (lastToken == "po")
 	{
 		if (token == "+")
-			pitch += 12;
+			noteInfo.pitch += 12;
 		else if (token == "-")
-			pitch -= 12;
+			noteInfo.pitch -= 12;
 		else
 			printf ("Unrecognized po parameter");
-		freq = 440.0 * std::pow (2.0, ((float) pitch) / 12.0);
+		noteInfo.freq = 440.0 * std::pow (2.0, ((float) noteInfo.pitch) / 12.0);
 	}
 	else if (lastToken == "al")
-		attackLength = rate * std::stof (token);
+		noteInfo.attackLength = noteInfo.rate * std::stof (token) / noteInfo.tempo;
 	else if (lastToken == "rl")
 	{
-		releaseLength = rate * std::stof (token);
+		noteInfo.releaseLength = noteInfo.rate * std::stof (token);
 	}
 	else if (lastToken == "v")
 	{
-		vol = std::stof (token);
+		noteInfo.vol = std::stof (token);
 	}
 	else if (lastToken == "w")
 	{
-		handleWait (data, datai, rate, vol, freq,
-			    attackLength, releaseLength, len, token);
+		handleWait (data, datai, noteInfo, len, token);
+	}
+	else if (lastToken == "bps")
+	{
+		noteInfo.tempo = std::stof (token);
 	}
 	else if (lastToken == "usebuffer")
 	{
-		handleUsebuffer (data, datai, bc, buffers, token, vol);
+		handleUsebuffer (data, datai, bc, buffers, token, noteInfo.vol);
 	}
 }
 
@@ -134,15 +132,11 @@ void evaluateMauveBuffer (MauveBuffer &buffer, const size_t bc, const MauveBuffe
 {
 	int pitch = 0;
 	size_t datai = 1;
-	int attackLength = 0;
-	int releaseLength = 0;
-	int rate = 44100;
-	float vol = 1;
-	float freq = 440;
+	NoteInfo noteInfo;
 	size_t pos = 0;
 	size_t posL = 0;
 	size_t posM = 0;
-	size_t len = getSongLength (buffer.content, bc, buffers) + 1;
+	size_t len = getSongLength (buffer.content, bc, buffers, noteInfo.rate) + 1;
 	buffer.bufferLength = len;
 	buffer.data = new float [len];
 	std::string lastToken;
@@ -152,8 +146,7 @@ void evaluateMauveBuffer (MauveBuffer &buffer, const size_t bc, const MauveBuffe
 		++pos;
 		lastToken = buffer.content.substr(posM, posL - posM - 1);
 		token = buffer.content.substr(posL, pos - posL - 1);
-		handleTokens (lastToken, token, buffer.data, len, pitch, datai,
-			      attackLength, releaseLength, vol, freq, rate, bc, buffers);
+		handleTokens (lastToken, token, buffer.data, len, datai, noteInfo, bc, buffers);
 		posM = posL;
 		posL = pos;
 	}

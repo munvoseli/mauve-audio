@@ -1,0 +1,26 @@
+defbuffer mainmain
+v .01
+usebuffer main
+usebuffer main
+bps 1
+po -
+p 0 w .5
+
+defbuffer main
+bps 2
+po -
+p 0 w .5
+usebuffer dododo
+p b w .5
+usebuffer dododo
+p 8 w .5
+usebuffer dododo
+p 6 w .5
+usebuffer dododo
+
+defbuffer dododo
+po -
+bps 4
+p 3 w .5
+p 5 w .5
+p 3 w .5

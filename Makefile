@@ -12,3 +12,4 @@ ifneq (,$(wildcard ./mauve))
 endif
 debug:
 	gdb --args ./mauve example
+# ./mauve taupe; ffplay -nodisp -f f32le -ar 44100 -ac 1 taupe.raw

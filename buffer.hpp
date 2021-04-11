@@ -67,13 +67,13 @@ void handleWait (float *&data, size_t &datai, const int rate,
 	datai = goal;
 }
 
-void handleUsebuffer (float *&data, size_t &datai, const size_t bc, const MauveBuffer *buffers, const std::string &token)
+void handleUsebuffer (float *&data, size_t &datai, const size_t bc, const MauveBuffer *buffers, const std::string &token, const float vol)
 {
 	size_t index = getIndexByName (token, bc, buffers);
 	size_t i = 0;
 	while (i < buffers[index].bufferLength)
 	{
-		data[datai] = buffers[index].data[i];
+		data[datai] = buffers[index].data[i] * vol;
 		++datai;
 		++i;
 	}
@@ -126,7 +126,7 @@ void handleTokens (const std::string &lastToken, const std::string &token,
 	}
 	else if (lastToken == "usebuffer")
 	{
-		handleUsebuffer (data, datai, bc, buffers, token);
+		handleUsebuffer (data, datai, bc, buffers, token, vol);
 	}
 }
 

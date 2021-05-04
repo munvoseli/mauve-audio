@@ -1,15 +1,15 @@
 all:
-	g++ -g mauve.cpp -o mauve
-	./mauve example
+	g++ -g mauve.cpp
+	./a.out taupe
 play:
-	ffplay -nodisp -f f32le -ar 44100 -ac 1 example.raw
+	ffplay -nodisp -f f32le -ar 44100 -ac 1 out.raw
 clean:
 ifneq (,$(wildcard ./example.raw))
-	rm example.raw
+	rm out.raw
 endif
-ifneq (,$(wildcard ./mauve))
-	rm mauve
+ifneq (,$(wildcard ./a.out))
+	rm a.out
 endif
 debug:
-	gdb --args ./mauve example
+	gdb --args ./a.out torturetime
 # ./mauve taupe; ffplay -nodisp -f f32le -ar 44100 -ac 1 taupe.raw

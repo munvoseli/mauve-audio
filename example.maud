@@ -10,13 +10,14 @@ defbuffer main
   usebuffer bread
   usemacro a
   usebuffer bread
+  w 5
 
 defbuffer pumefyuu
   po +
   w 2
 
 defbuffer bread
-  p 3
+  p 6
   w 1
 
 defmacro a

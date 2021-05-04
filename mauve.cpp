@@ -44,6 +44,7 @@ std::string getContent (std::ifstream& infile)
 
 int main (int argc, char **argv)
 {
+	printf ("hi\n");
 	std::ifstream infile;
 	std::ofstream outfile;
 	std::string line;
@@ -59,23 +60,17 @@ int main (int argc, char **argv)
 	int freqs [16];
 	int louds [16];
 	int notes = 0;
-	float *data;
 	MauveBuffer *buffers;
-	data = evaluateBuffers (content, rate, buffers);
+	evaluateBuffers (content, rate, buffers);
 	printf ("Buffer address (main) %p\n", buffers);
-	outfile.open(argv[1] + std::string(".raw"), std::ios::out | std::ios::binary | std::ios::trunc);
+	outfile.open("out.raw", std::ios::out | std::ios::binary | std::ios::trunc);
 	if (!outfile)
 		printf ("Failed output file :(\n");
 	for (int i = 0; i < buffers[0].bufferLength; i++)
 	{
-		outfile.write ( reinterpret_cast<char*>(&data[i]), sizeof(data[i]));
+		outfile.write ( reinterpret_cast<char*>(&buffers[0].data[i]), sizeof(buffers[0].data[i]));
 	}
 	outfile.close();
-	printf("Data: ");
-	for (int i = 0; i < 10; i++)
-		printf("%f ", data[i]);
-		printf("\n");
-	delete [] data;
-	//delete [] buffers;
+	delete [] buffers;
 	return 0;
 }

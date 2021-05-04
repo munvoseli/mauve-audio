@@ -1,38 +1,70 @@
 
-size_t getSongLength (const std::string& content, const size_t bc, const MauveBuffer *buffers, const int rate)
+void loadTimestampCount (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer)
 {
-	// search for waits and add
-	size_t pos = 0;
-	size_t posL = 0;
-	size_t posM = 0;
-	size_t len = 0; // number of samples
-	float tempo = 1;
-	std::string lastToken;
-	std::string token;
-	std::string newline = "\n";
-	while ((pos = content.find(newline, posL)) != std::string::npos)
+	size_t nPhrase = 0;
+	size_t cTimestamp = 0;
+	while (nPhrase < buffer.phrasec)
 	{
-		pos++;
-		lastToken = content.substr(posM, posL - posM - 1);
-		token = content.substr(posL, pos - posL - 1);
-		if (lastToken == "w")
-			len += rate * (std::stof (token) / tempo);
-		else if (lastToken == "usebuffer")
-		{
-			len += buffers[getIndexByName(token, bc, buffers)].bufferLength;
-		}
-		else if (lastToken == "bps")
-		{
-			tempo = std::stof (token);
-		}
-		posM = posL;
-		posL = pos;
+		if (buffer.phrases[nPhrase] == "time")
+			++cTimestamp;
+		else if (buffer.phrases[nPhrase] == "usebuffer")
+			cTimestamp += buffers[getIndexByName(buffer.phrases[nPhrase + 1], bc, buffers)].cTimestamp;
+		nPhrase += cCommandArgs (buffer.phrases[nPhrase]);
 	}
-	return len;
+	buffer.cTimestamp = cTimestamp;
+	buffer.anTimestamp = new size_t [cTimestamp];
+	buffer.asTimestamp = new std::string [cTimestamp];
 }
 
+// assumes that timestamp arrays have already been counted and allocated, but not filled, with loadTimestampCount
+void loadBufferLengthAndTimestamps (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer, const int rate)
+{
+	size_t ngData = 0;
+	size_t nData = 0;
+	size_t nPhrase = 0;
+	size_t nTimestamp = 0;
+	float fTempo = 1;
+	while (nPhrase < buffer.phrasec)
+	{
+		if (buffer.phrases[nPhrase] == "w")
+			nData += rate * (std::stof (buffer.phrases[nPhrase + 1]) / fTempo);
+		else if (buffer.phrases[nPhrase] == "bps")
+			fTempo = std::stof (buffer.phrases[nPhrase + 1]);
+		else if (buffer.phrases[nPhrase] == "usebuffer")
+		{
+			const MauveBuffer &buf = buffers[getIndexByName(buffer.phrases[nPhrase + 1], bc, buffers)];
+			size_t cTimestamp = buf.cTimestamp;
+			// load timestamps from remote buffer
+			for (size_t n = 0; n < cTimestamp; ++n)
+			{
+				buffer.asTimestamp[nTimestamp] = buf.asTimestamp[n];
+				buffer.anTimestamp[nTimestamp] = buf.anTimestamp[n] + nData;
+				++nTimestamp;
+			}
+			nData += buf.bufferLength;
+		}
+		else if (buffer.phrases[nPhrase] == "time")
+		{
+			buffer.asTimestamp[nTimestamp] = buffer.phrases[nPhrase + 1];
+			buffer.anTimestamp[nTimestamp] = nData;
+			++nTimestamp;
+		}
+		else if (buffer.phrases[nPhrase] == "timego")
+		{
+			nData = nDataAtTimestamp (buffer, buffer.phrases[nPhrase + 1], nTimestamp);
+		}
+		if (nData > ngData)
+			ngData = nData;
+		nPhrase += cCommandArgs (buffer.phrases[nPhrase]);
+	}
+	ngData += 1;
+	buffer.bufferLength = ngData;
+	buffer.data = new float [ngData];
+	for (size_t i = 0; i < ngData; ++i)
+		buffer.data[i] = 0;
+}
 
-void handleWait (float *&data, size_t &datai, const NoteInfo noteInfo,
+void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo noteInfo,
 		 const int len, const std::string &token)
 {
 	int start = datai;
@@ -41,10 +73,10 @@ void handleWait (float *&data, size_t &datai, const NoteInfo noteInfo,
 	int releaseGoal = std::max(start, goal - noteInfo.releaseLength);
 	while (datai < goal)
 	{
-		data[datai] = data[datai - 1] + noteInfo.vol * noteInfo.freq / (float) noteInfo.rate;
-		if (data[datai] > noteInfo.vol / 2.0)
-			data[datai] -= noteInfo.vol;
-		data[datai];
+		buffer.data[datai] = buffer.data[datai - 1] + noteInfo.vol * noteInfo.freq / (float) noteInfo.rate;
+		if (buffer.data[datai] > noteInfo.vol / 2.0)
+			buffer.data[datai] -= noteInfo.vol;
+		buffer.data[datai];
 		++datai;
 	}
 	printf ("handleWait: freq = %f Hz\n", noteInfo.freq);
@@ -52,7 +84,7 @@ void handleWait (float *&data, size_t &datai, const NoteInfo noteInfo,
 	// now, datai == goal.
 	while (datai > releaseGoal)
 	{
-		data[datai] *= i / (float) noteInfo.releaseLength;
+		buffer.data[datai] *= i / (float) noteInfo.releaseLength;
 		--datai;
 		++i;
 	}
@@ -60,31 +92,37 @@ void handleWait (float *&data, size_t &datai, const NoteInfo noteInfo,
 	i = 0;
 	while (datai < attackGoal)
 	{
-		data[datai] *= i / (float) noteInfo.attackLength;
+		buffer.data[datai] *= i / (float) noteInfo.attackLength;
 		++datai;
 		++i;
 	}
 	datai = goal;
 }
 
-void handleUsebuffer (float *&data, size_t &datai, const size_t bc, const MauveBuffer *buffers, const std::string &token, const float vol)
+void handleUsebuffer (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer, NoteInfo &noteInfo)
 {
-	size_t index = getIndexByName (token, bc, buffers);
+	size_t index = getIndexByName (buffer.phrases[noteInfo.nPhrase + 1], bc, buffers);
 	size_t i = 0;
 	while (i < buffers[index].bufferLength)
 	{
-		data[datai] = buffers[index].data[i] * vol;
-		++datai;
+		buffer.data[noteInfo.nData] += buffers[index].data[i] * noteInfo.vol;
+		++noteInfo.nData;
 		++i;
 	}
 }
 
-void handleTokens (const std::string &lastToken, const std::string &token,
-		   float *&data, int len,
-		   size_t &datai,
-		   NoteInfo &noteInfo,
+void handleTimego (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer, NoteInfo &noteInfo)
+{
+	noteInfo.nData = nDataAtTimestamp (buffer, buffer.phrases[noteInfo.nPhrase + 1], noteInfo.nTimestamp);
+}
+
+void handleTokens (MauveBuffer &buffer,
+		   size_t &datai, NoteInfo &noteInfo,
 		   const size_t bc, const MauveBuffer *buffers)
 {
+	const std::string &lastToken = buffer.phrases[noteInfo.nPhrase];
+	const std::string &token = buffer.phrases[noteInfo.nPhrase + 1];
+	const size_t len = buffer.bufferLength;
 	int rem;
 	if (false)
 	{}
@@ -107,25 +145,25 @@ void handleTokens (const std::string &lastToken, const std::string &token,
 	else if (lastToken == "al")
 		noteInfo.attackLength = noteInfo.rate * std::stof (token) / noteInfo.tempo;
 	else if (lastToken == "rl")
-	{
 		noteInfo.releaseLength = noteInfo.rate * std::stof (token);
-	}
 	else if (lastToken == "v")
-	{
 		noteInfo.vol = std::stof (token);
-	}
+	else if (lastToken == "bps")
+		noteInfo.tempo = std::stof (token);
 	else if (lastToken == "w")
 	{
-		handleWait (data, datai, noteInfo, len, token);
-	}
-	else if (lastToken == "bps")
-	{
-		noteInfo.tempo = std::stof (token);
+		handleWait (buffer, noteInfo.nData, noteInfo, len, token);
 	}
 	else if (lastToken == "usebuffer")
 	{
-		handleUsebuffer (data, datai, bc, buffers, token, noteInfo.vol);
+		handleUsebuffer (bc, buffers, buffer, noteInfo);
 	}
+	else if (lastToken == "timego")
+	{
+		handleTimego (bc, buffers, buffer, noteInfo);
+	}
+	else if (lastToken == "time")
+		++noteInfo.nTimestamp;
 }
 
 void evaluateMauveBuffer (MauveBuffer &buffer, const size_t bc, const MauveBuffer *buffers)
@@ -133,22 +171,16 @@ void evaluateMauveBuffer (MauveBuffer &buffer, const size_t bc, const MauveBuffe
 	int pitch = 0;
 	size_t datai = 1;
 	NoteInfo noteInfo;
-	size_t pos = 0;
-	size_t posL = 0;
-	size_t posM = 0;
-	size_t len = getSongLength (buffer.content, bc, buffers, noteInfo.rate) + 1;
-	buffer.bufferLength = len;
-	buffer.data = new float [len];
+	loadTimestampCount (bc, buffers, buffer);
+	loadBufferLengthAndTimestamps (bc, buffers, buffer, 44100);
 	std::string lastToken;
 	std::string token;
-	while ((pos = buffer.content.find("\n", posL)) != std::string::npos)
+	printf ("%ld %ld\n", noteInfo.nPhrase, buffer.phrasec);
+	while (noteInfo.nPhrase < buffer.phrasec)
 	{
-		++pos;
-		lastToken = buffer.content.substr(posM, posL - posM - 1);
-		token = buffer.content.substr(posL, pos - posL - 1);
-		handleTokens (lastToken, token, buffer.data, len, datai, noteInfo, bc, buffers);
-		posM = posL;
-		posL = pos;
+		printf ("%s\n", buffer.phrases[noteInfo.nPhrase].c_str());
+		handleTokens (buffer, datai, noteInfo, bc, buffers);
+		noteInfo.nPhrase += cCommandArgs (buffer.phrases[noteInfo.nPhrase]);
 	}
 }
 
@@ -172,20 +204,23 @@ bool bufferDependenciesMet (size_t testi, size_t bc, MauveBuffer *buffers)
 	return true;
 }
 
-// MauveBuffer *&buffers feels like it should be illegal but I want a reference to the pointer instead of a pointer to the pointer because personal preference?
 float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *&buffers) // macros have been evaluated
 {
 	int bufferCount = getBufferCount (content);
 	buffers = new MauveBuffer [bufferCount]; // collected in main
 	// load the buffer names into the MauveBuffers
 	loadBufferNamesAndContent (content, bufferCount, buffers);
+	loadAllPhrases (bufferCount, buffers);
+	size_t i, j;
 	// try and get each buffer to load
 	bool allBuffersLoaded = false;
-	size_t i, j;
 	printf ("evaluateBuffers: bufferCount is %d\n", bufferCount);
 	for (i = 0; i < bufferCount; ++i)
 	{
-		printf ("evaluateBuffers: buffer %s\n%s\n", buffers[i].name.c_str(), buffers[i].content.c_str());
+		printf ("evaluateBuffers: buffer %s\n", buffers[i].name.c_str());
+		for (j = 0; j < buffers[i].phrasec; ++j)
+			printf ("%s ", buffers[i].phrases[j].c_str());
+		printf ("\n");
 	}
 	while (!allBuffersLoaded)
 	{
@@ -211,5 +246,9 @@ float* evaluateBuffers (const std::string &content, int rate, MauveBuffer *&buff
 	}
 	printf ("evaluateBuffers: Buffer address (evalBuf): %p\n", buffers);
 	printf ("Data address for buffer 0: %p\n", buffers[0].data);
+	printf("Data: ");
+	for (int i = 0; i < 10; i++)
+		printf("%f ", buffers[0].data[i]);
+	printf("\n");
 	return buffers[0].data;
 }

@@ -1,5 +1,4 @@
 defbuffer mainmain
-v .01
 usebuffer main
 usebuffer main
 bps 1

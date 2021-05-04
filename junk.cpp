@@ -74,3 +74,36 @@ bool doesBufferHaveDependency (const std::string &content,
 	// pos_use == epos_bufcon -> false
 	return pos_usebuffer < aepos_bufcon[1] || pos_usebuffer == std::string::npos;
 }
+
+
+size_t getSongLength (const std::string& content, const size_t bc, const MauveBuffer *buffers, const int rate)
+{
+	// search for waits and add
+	size_t pos = 0;
+	size_t posL = 0;
+	size_t posM = 0;
+	size_t len = 0; // number of samples
+	float tempo = 1;
+	std::string lastToken;
+	std::string token;
+	std::string newline = "\n";
+	while ((pos = content.find(newline, posL)) != std::string::npos)
+	{
+		pos++;
+		lastToken = content.substr(posM, posL - posM - 1);
+		token = content.substr(posL, pos - posL - 1);
+		if (lastToken == "w")
+			len += rate * (std::stof (token) / tempo);
+		else if (lastToken == "usebuffer")
+		{
+			len += buffers[getIndexByName(token, bc, buffers)].bufferLength;
+		}
+		else if (lastToken == "bps")
+		{
+			tempo = std::stof (token);
+		}
+		posM = posL;
+		posL = pos;
+	}
+	return len;
+}

@@ -1,0 +1,29 @@
+defbuffer main
+bps 2
+po - po -
+usemacro spook
+usemacro spook
+p b w 2
+p 0 w 3
+
+defmacro spook
+
+usemacro spoook1
+usemacro spok2
+
+defmacro spoook1
+
+p 5 w 1
+p 7 w 7
+p 5 w 1
+p 7 w 1
+p 8 w 7
+
+defmacro spok2
+
+p 5 w 1
+p 7 w 7
+p 5 w 1
+p 7 w 1
+p 8 w 4
+p 0 w 3

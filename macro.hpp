@@ -31,17 +31,21 @@ bool getMacroContentBounds (const std::string &content, const std::string &buffe
 
 void applyMacro (std::string& content, std::string& macroName, std::string& macroContent)
 {
-	size_t pos_usemacro, pos_name, poe_name;
-	while ((pos_usemacro = content.find("usemacro")) != std::string::npos)
+	size_t pos_usemacro = 0, pos_name, poe_name;
+	while ((pos_usemacro = content.find("usemacro", pos_usemacro)) != std::string::npos)
 	{
-		pos_name = content.find('\n', pos_usemacro);
+		printf ("%s\n",content.c_str());
+		pos_name = content.find('\n', pos_usemacro + 8);
 		while (content[pos_name] == '\n')
 			++pos_name;
 		poe_name = content.find('\n', pos_name);
-		if ( content.substr ( pos_name, poe_name - pos_name ) != macroName )
+		if ( content.substr ( pos_name, poe_name - pos_name ) == macroName )
+		{
+			content.erase (pos_usemacro, poe_name - pos_usemacro);
+			content.insert (pos_usemacro, macroContent.c_str());
 			continue;
-		content.erase (pos_usemacro, poe_name - pos_usemacro);
-		content.insert (pos_usemacro, macroContent.c_str());
+		}
+		pos_usemacro += 8;
 	}
 }
 

@@ -24,7 +24,10 @@ std::string getContent (std::ifstream& infile)
 	std::string space = " ";
 	// replace spaces with newlines
 	while ((pos = content.find(space)) != std::string::npos)
+	{
 		content.replace(pos, 1, newline);
+		++pos;
+	}
 	content.append("\n");
 	// preprocess macros
 	applyMacros (content);
@@ -44,7 +47,7 @@ std::string getContent (std::ifstream& infile)
 
 int main (int argc, char **argv)
 {
-	printf ("hi\n");
+	printf ("main: entering main\n");
 	std::ifstream infile;
 	std::ofstream outfile;
 	std::string line;

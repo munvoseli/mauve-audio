@@ -4,7 +4,6 @@ defbuffer main
   timego r
   usebuffer a
   timego s
-  timego r
   usebuffer b
 
 defbuffer b

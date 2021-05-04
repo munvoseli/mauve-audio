@@ -4,7 +4,7 @@ all:
 play:
 	ffplay -nodisp -f f32le -ar 44100 -ac 1 out.raw
 clean:
-ifneq (,$(wildcard ./example.raw))
+ifneq (,$(wildcard ./out.raw))
 	rm out.raw
 endif
 ifneq (,$(wildcard ./a.out))

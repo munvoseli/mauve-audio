@@ -1,15 +1,13 @@
 defbuffer main
   time r
-  p 0 w 1
-  timego r
   usebuffer a
   timego s
   usebuffer b
 
 defbuffer b
-  p b w 10
+  p b w 1
 
 defbuffer a
-  p 5 w 1
+  p 0 w 1
   time s
-  p 6 w 1
+  p 0 w 1

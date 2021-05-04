@@ -113,6 +113,6 @@ size_t nDataAtTimestamp (MauveBuffer &buffer, const std::string &sName, const si
 		if (sName == buffer.asTimestamp[nTimestamp])
 			return buffer.anTimestamp[nTimestamp];
 	}
-	printf ("nDataAtNominalTime: AAAAH timestamp %s not found", sName.c_str());
+	//printf ("nDataAtNominalTime: AAAAH timestamp %s not found", sName.c_str());
 	return 0;
 }

@@ -16,6 +16,25 @@ void loadTimestampCount (const size_t bc, const MauveBuffer *buffers, MauveBuffe
 	buffer.asTimestamp = new std::string [cTimestamp];
 }
 
+float fGetFloatAssumeFraction (const std::string &str, const size_t &split)
+{
+	return std::stof (str.substr(0,split)) / std::stof (str.substr(split+1));
+}
+
+float fGetFloatMaybeFraction (const std::string &str)
+{
+	size_t split = str.find("/");
+	if (split == std::string::npos)
+		return std::stof (str);
+	else
+		return fGetFloatAssumeFraction (str, split);
+}
+
+size_t nDataDelta (const std::string &str, const int &rate, const float &fTempo)
+{
+	return rate * (fGetFloatMaybeFraction (str) / fTempo);
+}
+
 // assumes that timestamp arrays have already been counted and allocated, but not filled, with loadTimestampCount
 void loadBufferLengthAndTimestamps (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer, const int rate)
 {
@@ -27,15 +46,14 @@ void loadBufferLengthAndTimestamps (const size_t bc, const MauveBuffer *buffers,
 	while (nPhrase < buffer.phrasec)
 	{
 		if (buffer.phrases[nPhrase] == "w")
-			nData += rate * (std::stof (buffer.phrases[nPhrase + 1]) / fTempo);
+			nData += nDataDelta (buffer.phrases[nPhrase + 1], rate, fTempo);
 		else if (buffer.phrases[nPhrase] == "bps")
-			fTempo = std::stof (buffer.phrases[nPhrase + 1]);
+			fTempo = fGetFloatMaybeFraction (buffer.phrases[nPhrase + 1]);
 		else if (buffer.phrases[nPhrase] == "usebuffer")
 		{
 			const MauveBuffer &buf = buffers[getIndexByName(buffer.phrases[nPhrase + 1], bc, buffers)];
-			size_t cTimestamp = buf.cTimestamp;
 			// load timestamps from remote buffer
-			for (size_t n = 0; n < cTimestamp; ++n)
+			for (size_t n = 0; n < buf.cTimestamp; ++n)
 			{
 				buffer.asTimestamp[nTimestamp] = buf.asTimestamp[n];
 				buffer.anTimestamp[nTimestamp] = buf.anTimestamp[n] + nData;
@@ -69,7 +87,7 @@ void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo noteInfo,
 {
 	int start = datai;
 	int attackGoal = std::min(start + noteInfo.attackLength, len - 1);
-	int goal = datai + std::stof (token) / noteInfo.tempo * (float) noteInfo.rate;
+	int goal = datai + nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	int releaseGoal = std::max(start, goal - noteInfo.releaseLength);
 	while (datai < goal)
 	{
@@ -102,13 +120,15 @@ void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo noteInfo,
 void handleUsebuffer (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer, NoteInfo &noteInfo)
 {
 	size_t index = getIndexByName (buffer.phrases[noteInfo.nPhrase + 1], bc, buffers);
+	const MauveBuffer &buf = buffers[index];
 	size_t i = 0;
-	while (i < buffers[index].bufferLength)
+	while (i < buf.bufferLength)
 	{
-		buffer.data[noteInfo.nData] += buffers[index].data[i] * noteInfo.vol;
+		buffer.data[noteInfo.nData] += buf.data[i] * noteInfo.vol;
 		++noteInfo.nData;
 		++i;
 	}
+	noteInfo.nTimestamp += buf.cTimestamp;
 }
 
 void handleTimego (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer, NoteInfo &noteInfo)
@@ -143,25 +163,19 @@ void handleTokens (MauveBuffer &buffer,
 		noteInfo.freq = 440.0 * std::pow (2.0, ((float) noteInfo.pitch) / 12.0);
 	}
 	else if (lastToken == "al")
-		noteInfo.attackLength = noteInfo.rate * std::stof (token) / noteInfo.tempo;
+		noteInfo.attackLength = nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	else if (lastToken == "rl")
-		noteInfo.releaseLength = noteInfo.rate * std::stof (token);
+		noteInfo.releaseLength = nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	else if (lastToken == "v")
 		noteInfo.vol = std::stof (token);
 	else if (lastToken == "bps")
-		noteInfo.tempo = std::stof (token);
+		noteInfo.tempo = fGetFloatMaybeFraction (token);
 	else if (lastToken == "w")
-	{
 		handleWait (buffer, noteInfo.nData, noteInfo, len, token);
-	}
 	else if (lastToken == "usebuffer")
-	{
 		handleUsebuffer (bc, buffers, buffer, noteInfo);
-	}
 	else if (lastToken == "timego")
-	{
 		handleTimego (bc, buffers, buffer, noteInfo);
-	}
 	else if (lastToken == "time")
 		++noteInfo.nTimestamp;
 }
@@ -178,7 +192,7 @@ void evaluateMauveBuffer (MauveBuffer &buffer, const size_t bc, const MauveBuffe
 	printf ("%ld %ld\n", noteInfo.nPhrase, buffer.phrasec);
 	while (noteInfo.nPhrase < buffer.phrasec)
 	{
-		printf ("%s\n", buffer.phrases[noteInfo.nPhrase].c_str());
+		//printf ("%s\n", buffer.phrases[noteInfo.nPhrase].c_str());
 		handleTokens (buffer, datai, noteInfo, bc, buffers);
 		noteInfo.nPhrase += cCommandArgs (buffer.phrases[noteInfo.nPhrase]);
 	}

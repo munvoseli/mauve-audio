@@ -105,10 +105,10 @@ size_t cCommandArgs (const std::string &command) // includes command; (w 1) => "
 	return 1;
 }
 
-size_t nDataAtTimestamp (MauveBuffer &buffer, const std::string &sName, const size_t nSearchStart)
+size_t nDataAtTimestamp (MauveBuffer &buffer, const std::string &sName, const size_t nSearchLength)
 {
 	// going backwards; want to make sure that most recent timestamp is used
-	for (size_t nTimestamp = nSearchStart; nTimestamp >= 0; --nTimestamp)
+	for (size_t nTimestamp = nSearchLength - 1; nTimestamp >= 0; --nTimestamp)
 	{
 		if (sName == buffer.asTimestamp[nTimestamp])
 			return buffer.anTimestamp[nTimestamp];

@@ -116,3 +116,19 @@ size_t nDataAtTimestamp (MauveBuffer &buffer, const std::string &sName, const si
 	//printf ("nDataAtNominalTime: AAAAH timestamp %s not found", sName.c_str());
 	return 0;
 }
+
+int iPitchFromNumberRound (const std::string &str, const NoteInfo &noteInfo)
+{
+	int rem = std::stoi (str, 0, 12);
+	return std::round( (float) (noteInfo.pitch - rem) / 12.0) * 12 + rem;
+}
+
+int iPitchFromString (const std::string &str, const NoteInfo &noteInfo)
+{
+	size_t split = str.find (":");
+	if (split == std::string::npos || split == 0)
+		return iPitchFromNumberRound (str, noteInfo);
+	else
+		return std::stoi (str.substr (0, split), nullptr, 12) * 12
+		     + std::stoi (str.substr (split + 1), nullptr, 12);
+}

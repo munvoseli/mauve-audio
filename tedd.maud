@@ -1,0 +1,32 @@
+defbuffer main
+usebuffer loop
+
+defbuffer loop
+po -
+al .1
+rl .5
+time s p 8 w 1 timego s
+usebuffer a
+time s p 7 w 1 timego s
+usebuffer a
+time s p 8 w 1 timego s
+usebuffer a
+time s p 7 w 1 timego s
+usebuffer b
+
+
+defbuffer a
+bps 4
+al .1
+rl .5
+p 3 w 1
+p 7 w 1
+p 8 w 2
+
+defbuffer b
+bps 4
+al .1
+rl .5
+p 2 w 1
+p 5 w 1
+p 7 w 2

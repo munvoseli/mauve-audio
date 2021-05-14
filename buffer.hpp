@@ -143,13 +143,11 @@ void handleTokens (MauveBuffer &buffer,
 	const std::string &lastToken = buffer.phrases[noteInfo.nPhrase];
 	const std::string &token = buffer.phrases[noteInfo.nPhrase + 1];
 	const size_t len = buffer.bufferLength;
-	int rem;
 	if (false)
 	{}
         else if (lastToken == "p")
 	{
-		rem = std::stoi (token, 0, 12);
-		noteInfo.pitch = std::round( (float) (noteInfo.pitch - rem) / 12.0) * 12 + rem;
+		noteInfo.pitch = iPitchFromString (token, noteInfo);
 		noteInfo.freq = 440.0 * std::pow (2.0, ((float) noteInfo.pitch) / 12.0);
 	}
         else if (lastToken == "po")

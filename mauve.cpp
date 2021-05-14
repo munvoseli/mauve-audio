@@ -52,7 +52,8 @@ int main (int argc, char **argv)
 	std::ofstream outfile;
 	std::string line;
 	std::string content;
-	infile.open(argv[1] + std::string(".maud"));
+	//infile.open(argv[1] + std::string(".maud"));
+	infile.open (argv[1]);
 	if (!infile)
 		printf ("No input file :(\n");
 	content = getContent (infile);

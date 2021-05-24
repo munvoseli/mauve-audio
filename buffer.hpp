@@ -1,3 +1,4 @@
+#pragma once
 
 void loadTimestampCount (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer)
 {
@@ -85,33 +86,42 @@ void loadBufferLengthAndTimestamps (const size_t bc, const MauveBuffer *buffers,
 void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo noteInfo,
 		 const int len, const std::string &token)
 {
+	size_t cSample = nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	int start = datai;
+	int goal = datai + cSample;
 	int attackGoal = std::min(start + noteInfo.attackLength, len - 1);
-	int goal = datai + nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	int releaseGoal = std::max(start, goal - noteInfo.releaseLength);
-	while (datai < goal)
+	size_t nSample;
+	float tempSample;
+	buffer.data[0] = 0;
+	for (size_t np = 0; np < noteInfo.cPitch; ++np)
 	{
-		buffer.data[datai] = buffer.data[datai - 1] + noteInfo.vol * noteInfo.freq / (float) noteInfo.rate;
-		if (buffer.data[datai] > noteInfo.vol / 2.0)
-			buffer.data[datai] -= noteInfo.vol;
-		buffer.data[datai];
-		++datai;
+		tempSample = 0;
+		for (nSample = datai; nSample < goal; ++nSample)
+		{
+			tempSample += noteInfo.vol * noteInfo.aFreq[np] / (float) noteInfo.rate;
+			if (tempSample * 2 > noteInfo.vol)
+				tempSample -= noteInfo.vol;
+			buffer.data[nSample] += tempSample;
+		}
 	}
-	printf ("handleWait: freq = %f Hz\n", noteInfo.freq);
+	printf ("handleWait: doing %ld pitches\n", noteInfo.cPitch);
+	printf ("handleWait: frequency is %f\n", noteInfo.aFreq[0]);
+	printf ("handleWait: pitch is %d\n", noteInfo.aPitch[0]);
 	float i = 0;
-	// now, datai == goal.
-	while (datai > releaseGoal)
+	nSample = goal;
+	while (nSample > releaseGoal)
 	{
-		buffer.data[datai] *= i / (float) noteInfo.releaseLength;
-		--datai;
+		buffer.data[nSample] *= i / (float) noteInfo.releaseLength;
+		--nSample;
 		++i;
 	}
-	datai = start;
+	nSample = start;
 	i = 0;
-	while (datai < attackGoal)
+	while (nSample < attackGoal)
 	{
-		buffer.data[datai] *= i / (float) noteInfo.attackLength;
-		++datai;
+		buffer.data[nSample] *= i / (float) noteInfo.attackLength;
+		++nSample;
 		++i;
 	}
 	datai = goal;
@@ -147,8 +157,8 @@ void handleTokens (MauveBuffer &buffer,
 	{}
         else if (lastToken == "p")
 	{
-		noteInfo.pitch = iPitchFromString (token, noteInfo);
-		noteInfo.freq = 440.0 * std::pow (2.0, ((float) noteInfo.pitch) / 12.0);
+		//noteInfo.pitch = iPitchFromString (token, noteInfo);
+		vLoadPitches (token, noteInfo);
 	}
         else if (lastToken == "po")
 	{

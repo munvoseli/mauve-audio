@@ -1,0 +1,8 @@
+defbuffer main
+al 1
+rl .1
+p 0/4/7 w 1 po -
+p 0/5/7 w 1 po -
+p 0/2/7 w 1 po -
+v .5
+p 0/4/7 w 2

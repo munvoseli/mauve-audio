@@ -1,3 +1,5 @@
+#pragma once
+
 // information used for describing buffer
 typedef struct {
 	std::string name;
@@ -29,4 +31,8 @@ typedef struct {
 	size_t nData = 0;
 	size_t nPhrase = 0;
 	size_t nTimestamp = 0;
+	
+	size_t cPitch = 0;
+	int aPitch [16];
+	float aFreq [16];
 } NoteInfo;

@@ -132,3 +132,44 @@ int iPitchFromString (const std::string &str, const NoteInfo &noteInfo)
 		return std::stoi (str.substr (0, split), nullptr, 12) * 12
 		     + std::stoi (str.substr (split + 1), nullptr, 12);
 }
+
+size_t nCountPitches (const std::string &str)
+{
+	size_t c = 1;
+        for (size_t i = 0; i < str.length(); ++i)
+		if (str[i] == '/')
+			++c;
+	return c;
+}
+
+void vLoadPitchesAssumeYes (const std::string &str, NoteInfo &noteInfo)
+{
+	size_t indl = 0;
+	size_t c = 0;
+	for (size_t i = 0; i < str.length(); ++i)
+	{
+		if (str[i] == '/')
+		{
+			noteInfo.pitch = iPitchFromString (str.substr (indl, i - indl), noteInfo);
+			noteInfo.aPitch[c] = noteInfo.pitch;
+			noteInfo.aFreq[c] = 440.0 * std::pow (2.0, ((float) noteInfo.pitch) / 12.0);
+			++c;
+			indl = i + 1;
+		}
+	}
+	noteInfo.pitch = iPitchFromString (str.substr (indl), noteInfo);
+	noteInfo.aPitch[c] = noteInfo.pitch;
+	noteInfo.aFreq[c] = 440.0 * std::pow (2.0, ((float) noteInfo.pitch) / 12.0);
+	noteInfo.cPitch = c + 1;
+}
+
+void vLoadPitches (const std::string &str, NoteInfo &noteInfo)
+{
+	if (str == "no")
+	{
+		noteInfo.cPitch = 0;
+		return;
+	}
+	else
+		vLoadPitchesAssumeYes (str, noteInfo);
+}

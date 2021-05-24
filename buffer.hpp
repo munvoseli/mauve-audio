@@ -89,8 +89,10 @@ void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo noteInfo,
 	size_t cSample = nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	int start = datai;
 	int goal = datai + cSample;
-	int attackGoal = std::min(start + noteInfo.attackLength, len - 1);
-	int releaseGoal = std::max(start, goal - noteInfo.releaseLength);
+	int attackGoal = std::min (start + noteInfo.attackLength, len - 1);
+	if (attackGoal > goal)
+		attackGoal = goal;
+	int releaseGoal = std::max (start, goal - noteInfo.releaseLength);
 	size_t nSample;
 	float tempSample;
 	buffer.data[0] = 0;

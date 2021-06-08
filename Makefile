@@ -2,7 +2,7 @@ all:
 	g++ -g mauve.cpp
 #	./a.out timego
 play:
-	ffplay -nodisp -f f32le -ar 44100 -ac 1 out.raw
+	ffplay -autoexit -nodisp -f f32le -ar 44100 -ac 1 out.raw
 clean:
 ifneq (,$(wildcard ./out.raw))
 	rm out.raw

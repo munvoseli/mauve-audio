@@ -48,8 +48,8 @@ typedef struct {
 	int aPitch [16];
 	float aFreq [16];
 
-	size_t cDynamicLength; // min should be 2 in practice
-	char      aluDynamic [16]; //  units for intranote dynamic interstop lengths
-	float aDynamicLength [16]; // values for intranote dynamic interstop lengths
-	float aDynamicVolume [16]; // values for intranote dynamic stop volumes
+	size_t cDynamicLength = 1; // min should be 1 in practice
+	char      aluDynamic [16] = {'f'}; //  units for intranote dynamic interstop lengths
+	float aDynamicLength [16] = {'1'}; // values for intranote dynamic interstop lengths
+	float aDynamicVolume [16] = {1,1}; // values for intranote dynamic stop volumes
 } NoteInfo;

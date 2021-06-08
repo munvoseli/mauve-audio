@@ -4,7 +4,6 @@
 #include <iterator>
 #include <cmath>
 #include <cstdint>
-#include "math.hpp"
 #include "struct.hpp"
 #include "macro.hpp"
 #include "contentbufferutils.hpp"

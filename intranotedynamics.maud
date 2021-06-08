@@ -1,5 +1,5 @@
 defbuffer main
 v 1
 p 0
-vv 0,1n,1,1s,0,
+vv .5,.5n,1,1s,0
 w 5

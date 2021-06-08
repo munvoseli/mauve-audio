@@ -231,14 +231,20 @@ void vLoadDynamicsInfo (const std::string &str, NoteInfo &noteInfo)
 	size_t nStop = 0;
 	size_t nLength = 0;
 	size_t nPos = 0;
-	size_t nPosOld = 0;
-	while ((nPos = str.find (",", nPos)) != std::string::npos)
+	size_t nPosOld;
+	while (true)
 	{
-		vHandleOneVVParameter (str.substr (nPosOld, nPos - nPosOld), noteInfo, nStop, nLength);
-		++nPos; // pos should be after comma now
 		nPosOld = nPos;
+		nPos = str.find (",", nPos);
+		if (nPos == std::string::npos)
+			nPos = str.length ();
+		if (nPos > nPosOld)
+			vHandleOneVVParameter (str.substr (nPosOld, nPos - nPosOld), noteInfo, nStop, nLength);
+		if (nPos == str.length())
+			break;
+		++nPos;
 	}
 	if (nStop != nLength + 1)
-		printf ("Malformed intranote dynamic (vv) parameter: %ld stops, %ld spans\n", nStop, nLength);
+		printf (COLOR_WARNING "Malformed intranote dynamic (vv) parameter: %ld stops, %ld spans\n" COLOR_RESET, nStop, nLength);
 	noteInfo.cDynamicLength = nLength;
 }

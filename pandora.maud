@@ -1,5 +1,6 @@
 defbuffer main
 bps 2
+vv 0,.05s,1,.05s,.5,1f,.5,.01s,0,
 po - po -
 usemacro spook
 usemacro spook

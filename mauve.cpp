@@ -1,9 +1,15 @@
+#define COLOR_WARNING "\x1b[1m\x1b[31m"
+//#define COLOR_WARNING "\x1b[31m"
+#define COLOR_RESET "\x1b[0m"
+
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <iterator>
 #include <cmath>
 #include <cstdint>
+
+
 #include "struct.hpp"
 #include "macro.hpp"
 #include "contentbufferutils.hpp"

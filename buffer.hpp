@@ -106,44 +106,46 @@ void vApplyVV (MauveBuffer &buffer, const NoteInfo &noteInfo, const int start, c
 	size_t nSample = start;
 	size_t nSpanGoal;
 	size_t nSpanStart;
-	float cSpanSample;
+	size_t dnSample;
+	size_t cSampleSpan;
 	float fSpanValue;
 	bool bBreakAfter;
-	printf ("vApplyVV: %d %d %ld %ld\n", start, goal, noteInfo.cDynamicLength, cSampleFree);
+	// printf ("vApplyVV: %d %d %ld %ld\n", start, goal, noteInfo.cDynamicLength, cSampleFree);
 	for (size_t nSpan = 0; nSpan < noteInfo.cDynamicLength; ++nSpan)
 	{
 		bBreakAfter = false;
 		fSpanValue = noteInfo.aDynamicLength [nSpan];
+		if (fSpanValue == 0)
+			continue;
 		switch (noteInfo.aluDynamic [nSpan])
 		{
-		case 'b': nSpanGoal = nSample + noteInfo.rate * (fSpanValue / noteInfo.tempo); break;
-		case 'n': nSpanGoal = nSample + cSample * fSpanValue; break;
-		case 's': nSpanGoal = nSample + noteInfo.rate * fSpanValue; break;
-		case 'f': nSpanGoal = nSample + cSampleFree * fSpanValue;
+		case 'b': cSampleSpan = noteInfo.rate * (fSpanValue / noteInfo.tempo); break;
+		case 'n': cSampleSpan = cSample * fSpanValue; break;
+		case 's': cSampleSpan = noteInfo.rate * fSpanValue; break;
+		case 'f': cSampleSpan = cSampleFree * fSpanValue;
 		}
+		nSpanGoal = cSampleSpan + nSample;
 		if (nSpanGoal > goal)
 		{
 			bBreakAfter = true;
 			nSpanGoal = goal;
 		}
-		if (nSpanGoal == nSample)
-		{
-			if (bBreakAfter)
-				break;
-			continue;
-		}
 		nSpanStart = nSample;
-		cSpanSample = nSpanGoal - nSpanStart;
 		float voldif = noteInfo.aDynamicVolume [nSpan + 1] - noteInfo.aDynamicVolume [nSpan];
 		while (nSample < nSpanGoal)
 		{
 			// use linear interpolation
-			float fLerpFactor = ((float) (nSample - nSpanStart)) / cSpanSample;
+			float fLerpFactor = ((float) (nSample - nSpanStart)) / (float) cSampleSpan;
 			buffer.data [nSample] *= noteInfo.aDynamicVolume [nSpan] + fLerpFactor * voldif;
 			++nSample;
 		}
 		if (bBreakAfter)
 			break;
+	}
+	while (nSample < goal)
+	{
+		buffer.data [nSample] *= noteInfo.aDynamicVolume [noteInfo.cDynamicLength];
+		++nSample;
 	}
 }
 

@@ -1,5 +1,5 @@
 all:
-	g++ -g mauve.cpp
+	g++ -g -std=c++2a mauve.cpp
 #	./a.out timego
 play:
 	ffplay -autoexit -nodisp -f f32le -ar 44100 -ac 1 out.raw

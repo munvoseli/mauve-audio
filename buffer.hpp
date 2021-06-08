@@ -153,21 +153,47 @@ void vApplyVV (MauveBuffer &buffer, const NoteInfo &noteInfo, const int start, c
 void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo &noteInfo,
 		 const int len, const std::string &token)
 {
+	//float cfSample = ((float) noteInfo.rate) * (fGetFloatMaybeFraction (token) / noteInfo.tempo);
+	// length of note in samples
 	size_t cSample = nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	int start = datai;
 	int goal = datai + cSample;
 	size_t nSample;
 	float tempSample;
 	buffer.data[0] = 0;
+	// for (size_t np = 0; np < noteInfo.cPitch; ++np)
+	// {
+	// 	tempSample = 0;
+	// 	for (nSample = datai; nSample < goal; ++nSample)
+	// 	{
+	// 		tempSample += noteInfo.vol * noteInfo.aFreq[np] / (float) noteInfo.rate;
+	// 		if (tempSample * 2 > noteInfo.vol)
+	// 			tempSample -= noteInfo.vol;
+	// 		buffer.data[nSample] += tempSample / 16;
+	// 	}
+	// }
+	//float cSampleWavelength;
+	float fProgressPerSample;
+	float fracWavelengthProgress;
 	for (size_t np = 0; np < noteInfo.cPitch; ++np)
 	{
-		tempSample = 0;
+		// samples/sec  /  cycles/sec  = samples/cycle
+		//cSampleWavelength = noteInfo.rate / noteInfo.aFreq [np];
+		fProgressPerSample = noteInfo.aFreq [np] / noteInfo.rate;
+		fracWavelengthProgress = 0;
 		for (nSample = datai; nSample < goal; ++nSample)
 		{
-			tempSample += noteInfo.vol * noteInfo.aFreq[np] / (float) noteInfo.rate;
-			if (tempSample * 2 > noteInfo.vol)
-				tempSample -= noteInfo.vol;
-			buffer.data[nSample] += tempSample / 16;
+			if (fracWavelengthProgress < .45)
+				tempSample = -noteInfo.vol;
+			else if (fracWavelengthProgress < .55)
+			{
+				tempSample = (float) std::lerp ((float) -noteInfo.vol, noteInfo.vol, (fracWavelengthProgress - (float) .45) / ((float) .1));
+			}
+			else
+				tempSample = noteInfo.vol;
+			buffer.data [nSample] += tempSample / 16;
+			fracWavelengthProgress += fProgressPerSample;
+			fracWavelengthProgress = fracWavelengthProgress - (char) fracWavelengthProgress;
 		}
 	}
 	// printf ("handleWait: doing %ld pitches\n", noteInfo.cPitch);

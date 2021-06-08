@@ -160,7 +160,7 @@ void vLoadPitchesAssumeYes (const std::string &str, NoteInfo &noteInfo)
 	}
 	noteInfo.pitch = iPitchFromString (str.substr (indl), noteInfo);
 	noteInfo.aPitch[c] = noteInfo.pitch;
-	noteInfo.aFreq[c] = 440.0 * std::pow (2.0, ((float) noteInfo.pitch) / 12.0);
+	noteInfo.aFreq[c] = 440.0 * std::pow (2.0, ((float) noteInfo.pitch - 72) / 12.0);
 	noteInfo.cPitch = c + 1;
 }
 

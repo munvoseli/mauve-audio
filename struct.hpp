@@ -34,7 +34,7 @@ typedef struct {
 	int releaseLength = 0;
 	float vol = 1;
 	float freq = 440;
-	int pitch = 0;
+	int pitch = 72;
 	float tempo = 1; // beats per second
 	// n beats = tempo * m seconds
 	// m seconds = n beats / tempo

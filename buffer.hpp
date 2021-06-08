@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 void loadTimestampCount (const size_t bc, const MauveBuffer *buffers, MauveBuffer &buffer)
 {
 	size_t nPhrase = 0;
@@ -15,25 +17,6 @@ void loadTimestampCount (const size_t bc, const MauveBuffer *buffers, MauveBuffe
 	buffer.cTimestamp = cTimestamp;
 	buffer.anTimestamp = new size_t [cTimestamp];
 	buffer.asTimestamp = new std::string [cTimestamp];
-}
-
-float fGetFloatAssumeFraction (const std::string &str, const size_t &split)
-{
-	return std::stof (str.substr(0,split)) / std::stof (str.substr(split+1));
-}
-
-float fGetFloatMaybeFraction (const std::string &str)
-{
-	size_t split = str.find("/");
-	if (split == std::string::npos)
-		return std::stof (str);
-	else
-		return fGetFloatAssumeFraction (str, split);
-}
-
-size_t nDataDelta (const std::string &str, const int &rate, const float &fTempo)
-{
-	return rate * (fGetFloatMaybeFraction (str) / fTempo);
 }
 
 // assumes that timestamp arrays have already been counted and allocated, but not filled, with loadTimestampCount
@@ -83,16 +66,94 @@ void loadBufferLengthAndTimestamps (const size_t bc, const MauveBuffer *buffers,
 		buffer.data[i] = 0;
 }
 
-void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo noteInfo,
+// works like the unit fr in CSS
+// should be positive
+// could be negative, with rounding error, but should only be rounding error
+// if it's too negative, something is wrong
+size_t cSamplePerFreeVV (const NoteInfo &noteInfo, const int &cNoteSampleTotal)
+{
+	int len = 0;
+	float cFree = 0;
+	float fSpanValue = 0;
+	for (size_t nSpan = 0; nSpan < noteInfo.cDynamicLength; ++nSpan)
+	{
+		fSpanValue = noteInfo.aDynamicLength [nSpan];
+		switch (noteInfo.aluDynamic [nSpan])
+		{
+		case 'b': // beats
+			len += noteInfo.rate * (fSpanValue / noteInfo.tempo);
+			break;
+		case 'n': // fraction of this note
+			len += cNoteSampleTotal * fSpanValue;
+			break;
+		case 's': // seconds
+			len += noteInfo.rate * fSpanValue;
+			break;
+		case 'f': // free
+			cFree += fSpanValue;
+		}
+	}
+	// just return 0 if it would be negative
+	if (len > cNoteSampleTotal)
+		return 0;
+	else
+		return ((cNoteSampleTotal - len) / cFree);
+}
+
+void vApplyVV (MauveBuffer &buffer, const NoteInfo &noteInfo, const int start, const int goal, const size_t cSample)
+{
+	size_t cSampleFree = cSamplePerFreeVV (noteInfo, cSample);
+	size_t nSample = start;
+	size_t nSpanGoal;
+	size_t nSpanStart;
+	float cSpanSample;
+	float fSpanValue;
+	bool bBreakAfter;
+	printf ("vApplyVV: %d %d %ld %ld\n", start, goal, noteInfo.cDynamicLength, cSampleFree);
+	for (size_t nSpan = 0; nSpan < noteInfo.cDynamicLength; ++nSpan)
+	{
+		bBreakAfter = false;
+		fSpanValue = noteInfo.aDynamicLength [nSpan];
+		switch (noteInfo.aluDynamic [nSpan])
+		{
+		case 'b': nSpanGoal = nSample + noteInfo.rate * (fSpanValue / noteInfo.tempo); break;
+		case 'n': nSpanGoal = nSample + cSample * fSpanValue; break;
+		case 's': nSpanGoal = nSample + noteInfo.rate * fSpanValue; break;
+		case 'f': nSpanGoal = nSample + cSampleFree * fSpanValue;
+		}
+		if (nSpanGoal > goal)
+		{
+			bBreakAfter = true;
+			nSpanGoal = goal;
+		}
+		if (nSpanGoal == nSample)
+		{
+			if (bBreakAfter)
+				break;
+			continue;
+		}
+		nSpanStart = nSample;
+		cSpanSample = nSpanGoal - nSpanStart;
+		float voldif = noteInfo.aDynamicVolume [nSpan + 1] - noteInfo.aDynamicVolume [nSpan];
+		while (nSample < nSpanGoal)
+		{
+			// use linear interpolation
+			float fLerpFactor = ((float) (nSample - nSpanStart)) / cSpanSample;
+			buffer.data [nSample] *= noteInfo.aDynamicVolume [nSpan] + fLerpFactor * voldif;
+			++nSample;
+		}
+		if (bBreakAfter)
+			break;
+	}
+}
+
+// to do: break into smaller functions
+void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo &noteInfo,
 		 const int len, const std::string &token)
 {
 	size_t cSample = nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	int start = datai;
 	int goal = datai + cSample;
-	int attackGoal = std::min (start + noteInfo.attackLength, len - 1);
-	if (attackGoal > goal)
-		attackGoal = goal;
-	int releaseGoal = std::max (start, goal - noteInfo.releaseLength);
 	size_t nSample;
 	float tempSample;
 	buffer.data[0] = 0;
@@ -104,28 +165,13 @@ void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo noteInfo,
 			tempSample += noteInfo.vol * noteInfo.aFreq[np] / (float) noteInfo.rate;
 			if (tempSample * 2 > noteInfo.vol)
 				tempSample -= noteInfo.vol;
-			buffer.data[nSample] += tempSample;
+			buffer.data[nSample] += tempSample / 16;
 		}
 	}
-	printf ("handleWait: doing %ld pitches\n", noteInfo.cPitch);
-	printf ("handleWait: frequency is %f\n", noteInfo.aFreq[0]);
-	printf ("handleWait: pitch is %d\n", noteInfo.aPitch[0]);
-	float i = 0;
-	nSample = goal;
-	while (nSample > releaseGoal)
-	{
-		buffer.data[nSample] *= i / (float) noteInfo.releaseLength;
-		--nSample;
-		++i;
-	}
-	nSample = start;
-	i = 0;
-	while (nSample < attackGoal)
-	{
-		buffer.data[nSample] *= i / (float) noteInfo.attackLength;
-		++nSample;
-		++i;
-	}
+	// printf ("handleWait: doing %ld pitches\n", noteInfo.cPitch);
+	// printf ("handleWait: frequency is %f\n", noteInfo.aFreq[0]);
+	// printf ("handleWait: pitch is %d\n", noteInfo.aPitch[0]);
+	vApplyVV (buffer, noteInfo, start, goal, cSample);
 	datai = goal;
 }
 
@@ -178,6 +224,8 @@ void handleTokens (MauveBuffer &buffer,
 		noteInfo.releaseLength = nDataDelta (token, noteInfo.rate, noteInfo.tempo);
 	else if (lastToken == "v")
 		noteInfo.vol = std::stof (token);
+	else if (lastToken == "vv")
+		vLoadDynamicsInfo (token, noteInfo);
 	else if (lastToken == "bps")
 		noteInfo.tempo = fGetFloatMaybeFraction (token);
 	else if (lastToken == "w")

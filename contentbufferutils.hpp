@@ -99,7 +99,8 @@ size_t cCommandArgs (const std::string &command) // includes command; (w 1) => "
 	    command == "po" ||
 	    command == "p" ||
 	    command == "v" ||
-	    command == "bps")
+	    command == "bps" ||
+	    command == "vv")
 		return 2;
 	printf ("commandToNargs: Command %s not found\n", command.c_str());
 	return 1;
@@ -172,4 +173,72 @@ void vLoadPitches (const std::string &str, NoteInfo &noteInfo)
 	}
 	else
 		vLoadPitchesAssumeYes (str, noteInfo);
+}
+
+float fGetFloatAssumeFraction (const std::string &str, const size_t &split)
+{
+	return std::stof (str.substr(0,split)) / std::stof (str.substr(split+1));
+}
+
+float fGetFloatMaybeFraction (const std::string &str)
+{
+	size_t split = str.find("/");
+	if (split == std::string::npos)
+		return std::stof (str);
+	else
+		return fGetFloatAssumeFraction (str, split);
+}
+
+size_t nDataDelta (const std::string &str, const int &rate, const float &fTempo)
+{
+	return rate * (fGetFloatMaybeFraction (str) / fTempo);
+}
+
+size_t cIntranoteLength (const std::string &str)
+{
+	size_t commas = 0;
+	size_t nPos = 0;
+	// there's one stop without comma
+	// then, for every two commas, there's one length and one stop
+	while ((nPos = str.find (",", nPos)) != std::string::npos)
+	{
+		++commas;
+		++nPos;
+	}
+	if (commas & 1) // odd number of commas, bad
+		printf ("Odd number of commas in intranote dynamic thingy bobber, please fix");
+	return commas >> 1;
+}
+
+void vHandleOneVVParameter (const std::string &str, NoteInfo &noteInfo, size_t &nStop, size_t &nLength)
+{
+	char type = str [str.length () - 1];
+	if (type == 'b' || type == 'f' || type == 'n' || type == 's')
+	{ // handle parameter as a length
+		noteInfo.aDynamicLength [nLength] = fGetFloatMaybeFraction (str.substr (0, str.length() - 1));
+		noteInfo.aluDynamic [nLength] = type;
+		++nLength;
+	}
+	else
+	{
+		noteInfo.aDynamicVolume [nStop] = fGetFloatMaybeFraction (str);
+	        ++nStop;
+	}
+}
+
+void vLoadDynamicsInfo (const std::string &str, NoteInfo &noteInfo)
+{
+	size_t nStop = 0;
+	size_t nLength = 0;
+	size_t nPos = 0;
+	size_t nPosOld = 0;
+	while ((nPos = str.find (",", nPos)) != std::string::npos)
+	{
+		vHandleOneVVParameter (str.substr (nPosOld, nPos - nPosOld), noteInfo, nStop, nLength);
+		++nPos; // pos should be after comma now
+		nPosOld = nPos;
+	}
+	if (nStop != nLength + 1)
+		printf ("Malformed intranote dynamic (vv) parameter: %ld stops, %ld spans\n", nStop, nLength);
+	noteInfo.cDynamicLength = nLength;
 }

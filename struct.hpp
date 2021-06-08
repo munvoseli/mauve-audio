@@ -1,6 +1,15 @@
 #pragma once
 
-// information used for describing buffer
+// units for measuring things for the intranote dynamics
+enum LengthUnit
+{
+	luBeats = 'b',   // b
+	luFree = 'f',    // f
+	luNotes = 'n',   // n
+	luSeconds = 's'  // s
+};
+
+// information used for describing buffer as a whole, mostly static when evaluating buffer
 typedef struct {
 	std::string name;
 	std::string content;
@@ -18,15 +27,18 @@ typedef struct {
 	bool *bTimestampCalced;
 } MauveBuffer;
 
-// information used in filling in buffer
+// information used for constructing notes, mostly dynamic when evaluating buffer
 typedef struct {
-	int rate = 44100;
+	int rate = 44100; // move to MauveBuffer someday? used for constructing notes
 	int attackLength = 0;
 	int releaseLength = 0;
 	float vol = 1;
 	float freq = 440;
 	int pitch = 0;
-	float tempo = 1; // bps
+	float tempo = 1; // beats per second
+	// n beats = tempo * m seconds
+	// m seconds = n beats / tempo
+	// m samples = n beats * rate / tempo
 	
 	size_t nData = 0;
 	size_t nPhrase = 0;
@@ -35,4 +47,9 @@ typedef struct {
 	size_t cPitch = 0;
 	int aPitch [16];
 	float aFreq [16];
+
+	size_t cDynamicLength; // min should be 2 in practice
+	char      aluDynamic [16]; //  units for intranote dynamic interstop lengths
+	float aDynamicLength [16]; // values for intranote dynamic interstop lengths
+	float aDynamicVolume [16]; // values for intranote dynamic stop volumes
 } NoteInfo;

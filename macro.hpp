@@ -34,7 +34,7 @@ size_t findUsemacroPos (std::string &content, std::string &macroName, size_t &po
 	size_t pos_usemacro = 0;
 	while ((pos_usemacro = content.find("usemacro", pos_usemacro)) != std::string::npos)
 	{
-		printf ("findUsemacroPos: found usemacro\n");
+		//printf ("findUsemacroPos: found usemacro\n");
 		pos_name = content.find('\n', pos_usemacro + 8);
 		while (content[pos_name] == '\n')
 			++pos_name;

@@ -175,6 +175,9 @@ void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo &noteInfo,
 	//float cSampleWavelength;
 	float fProgressPerSample;
 	float fracWavelengthProgress;
+	const float waveStopA = .4;
+	const float waveStopB = 1 - waveStopA;
+	const float waveStopDiff = .5 - waveStopA;
 	for (size_t np = 0; np < noteInfo.cPitch; ++np)
 	{
 		// samples/sec  /  cycles/sec  = samples/cycle
@@ -183,14 +186,17 @@ void handleWait (MauveBuffer &buffer, size_t &datai, const NoteInfo &noteInfo,
 		fracWavelengthProgress = 0;
 		for (nSample = datai; nSample < goal; ++nSample)
 		{
-			if (fracWavelengthProgress < .45)
-				tempSample = -noteInfo.vol;
-			else if (fracWavelengthProgress < .55)
+			if (fracWavelengthProgress < waveStopA)
+				//tempSample = -noteInfo.vol;
+				tempSample = std::lerp (-noteInfo.vol, 0, fracWavelengthProgress / waveStopA);
+			else if (fracWavelengthProgress < waveStopB)
 			{
-				tempSample = (float) std::lerp ((float) -noteInfo.vol, noteInfo.vol, (fracWavelengthProgress - (float) .45) / ((float) .1));
+				//tempSample = (float) std::lerp ((float) -noteInfo.vol, noteInfo.vol, (fracWavelengthProgress - (float) .4) / ((float) .2));
+				tempSample = 0;
 			}
 			else
-				tempSample = noteInfo.vol;
+				//tempSample = noteInfo.vol;
+				tempSample = std::lerp (0, noteInfo.vol, (fracWavelengthProgress - waveStopB) / waveStopA);
 			buffer.data [nSample] += tempSample / 16;
 			fracWavelengthProgress += fProgressPerSample;
 			fracWavelengthProgress = fracWavelengthProgress - (char) fracWavelengthProgress;
